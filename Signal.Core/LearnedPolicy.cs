@@ -130,9 +130,21 @@ namespace Signal.Core
             return n;
         }
 
-        public static Func<SignalController, ISignalPolicy> FactoryFor(Simulation sim)
-            => SignalCount(sim) > 1 ? Network : Junction;
+        /// <summary>Junctions a player could edit: not map edges, not lane forks,
+        /// not roundabout entries. A level with one is World 1's shape whatever
+        /// control it has; more than one is a network even if only one signal
+        /// remains, because the junction brain never saw stop-sign neighbours.</summary>
+        public static int JunctionCount(Simulation sim)
+        {
+            int n = 0;
+            foreach (var node in sim.Network.Nodes)
+                if (!node.IsBoundary && node.InLinks.Count >= 3 && !(node.Control is YieldEntryControl)) n++;
+            return n;
+        }
 
-        public static string NameFor(Simulation sim) => SignalCount(sim) > 1 ? NetworkName : JunctionName;
+        public static Func<SignalController, ISignalPolicy> FactoryFor(Simulation sim)
+            => JunctionCount(sim) > 1 ? Network : Junction;
+
+        public static string NameFor(Simulation sim) => JunctionCount(sim) > 1 ? NetworkName : JunctionName;
     }
 }
