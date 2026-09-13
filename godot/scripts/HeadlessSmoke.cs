@@ -168,6 +168,31 @@ namespace SignalGodot
                 Check(learned && r.Sim.Metrics.Completed > 0, $"trained policy drives grid3 ({r.Sim.Metrics.Completed} done in 60 s)");
             }
 
+            // 12) P3: an editor document builds, runs in the runner, and round-trips through user://.
+            {
+                var doc = EditorDoc.Starter();
+                doc.ops.Add(new EditOp { kind = EditKind.Roundabout, node = EditorDoc.JunctionId(3, 2) });
+                var lv = doc.Build();
+                var r = new SimRunner();
+                AddChild(r);
+                r.Load(lv, 9, doc.ops, withGhost: false, withTaps: false);
+                for (int i = 0; i < 600; i++) r._Process(0.1);
+                Check(r.Sim.Metrics.Completed > 0, $"editor starter level runs ({r.Sim.Metrics.Completed} done in 60 s)");
+                doc.name = "smoke test level";
+                Store.SaveDoc(doc);
+                var back = Store.LoadDoc(Store.Slug(doc.name));
+                Check(back != null && back.junctions.Count == 4 && back.ops.Count == 1, "editor doc saves and loads from user://");
+                var p = new PuzzleDef { id = "smoke-user", title = "smoke", level = doc.BuildRaw(), budget = 40, par = 20,
+                                        toolbox = { Tools.Signal() }, objectives = { new ObjectiveDef { kind = ObjectiveKind.AvgWait, value = 25 } } };
+                foreach (var op in doc.ops) p.initialOps.Add(op);
+                Store.SavePuzzle(p);
+                var mine = Store.LoadPuzzles();
+                var loaded = mine.Find(x => x.id == "smoke-user");
+                Check(loaded != null && PuzzleScorer.Evaluate(loaded, loaded.initialOps).Error == null, "exported puzzle loads and scores");
+                DirAccess.RemoveAbsolute($"{Store.PuzzlesDir}/smoke-user.json");
+                DirAccess.RemoveAbsolute($"{Store.LevelsDir}/smoke-test-level.json");
+            }
+
             GD.Print(failures == 0 ? "SMOKE PASSED" : $"{failures} SMOKE FAILURES");
             GetTree().Quit(failures);
         }

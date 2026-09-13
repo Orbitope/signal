@@ -321,6 +321,51 @@ class Program
             T.Assert(sps > 10000, $"too slow: {sps:N0} steps/sec");
         });
 
+        Console.WriteLine("== Editor document ==");
+        T.Run("starter doc builds a legal 2x2 level that runs", () =>
+        {
+            var doc = EditorDoc.Starter();
+            T.Assert(doc.Problems().Count == 0, string.Join("; ", doc.Problems()));
+            var lv = doc.Build();
+            int signals = lv.network.nodes.FindAll(n => n.control == ControlType.Signalized).Count;
+            int bounds = lv.network.nodes.FindAll(n => n.isBoundary).Count;
+            T.Assert(signals == 4 && bounds == 8, $"{signals} signals, {bounds} boundary nodes");
+            var sim = new Simulation(lv, 3);
+            Edits.AttachPolicies(sim, doc.ops);
+            for (int i = 0; i < 3000; i++) sim.Step();
+            T.Assert(sim.Metrics.Completed > 40, $"completed {sim.Metrics.Completed}");
+        });
+        T.Run("doc edits: one-way street, roundabout op, remove junction cleans up", () =>
+        {
+            var doc = EditorDoc.Starter();
+            var s = doc.StreetBetween(2, 1, 3, 1); s.ba = false;
+            doc.ops.Add(new EditOp { kind = EditKind.Roundabout, node = EditorDoc.JunctionId(2, 2) });
+            var lv = doc.Build();
+            T.Assert(lv.network.links.Find(l => l.id == EditorDoc.StreetLinkId(3, 1, 3)) == null, "west-bound link removed");
+            T.Assert(lv.network.nodes.Find(n => n.id == EditorDoc.JunctionId(2, 2)) == null, "roundabout replaced the junction");
+            doc.RemoveJunction(2, 2);
+            T.Assert(doc.ops.Count == 0 && doc.streets.Count == 2, $"ops {doc.ops.Count}, streets {doc.streets.Count}");
+            // With (2,2) gone the one-way street strands east-side traffic bound for (2,1): Build must refuse, not silently drop it.
+            bool refused = false;
+            try { doc.Build(); } catch (PuzzleException e) { refused = e.Message.Contains("no way through"); }
+            T.Assert(refused, "unroutable flow refused after removal");
+            s.ba = true;
+            T.Assert(doc.Build() != null, "routable again once the street is two-way");
+        });
+        T.Run("doc and exported puzzle round-trip through JSON", () =>
+        {
+            var json = new System.Text.Json.JsonSerializerOptions { IncludeFields = true, Converters = { new System.Text.Json.Serialization.JsonStringEnumConverter() } };
+            var doc = EditorDoc.Starter();
+            doc.ops.Add(new EditOp { kind = EditKind.AddBay, link = EditorDoc.EntryLinkId(2, 1, 0) });
+            var back = System.Text.Json.JsonSerializer.Deserialize<EditorDoc>(System.Text.Json.JsonSerializer.Serialize(doc, json), json);
+            T.Assert(back.junctions.Count == 4 && back.ops.Count == 1 && back.ops[0].kind == EditKind.AddBay, "doc round-trip");
+            var p = new PuzzleDef { id = "user-test", title = "t", level = doc.Build(), initialOps = doc.ops, budget = 50, par = 25,
+                                    toolbox = { Tools.Signal(), Tools.NoLeft() }, objectives = { new ObjectiveDef { kind = ObjectiveKind.AvgWait, value = 30 } } };
+            var pb = System.Text.Json.JsonSerializer.Deserialize<PuzzleDef>(System.Text.Json.JsonSerializer.Serialize(p, json), json);
+            var r = PuzzleScorer.Evaluate(pb, pb.initialOps);
+            T.Assert(r.Error == null && pb.toolbox.Count == 2 && pb.level.network.links.Count == p.level.network.links.Count, r.Error ?? "puzzle round-trip");
+        });
+
         Console.WriteLine("== Learned policy port ==");
         foreach (var fix in System.IO.Directory.GetFiles("../godot/policies", "*.parity.json"))
         {

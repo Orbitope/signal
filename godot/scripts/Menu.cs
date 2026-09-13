@@ -40,8 +40,9 @@ namespace SignalGodot
             col.AddChild(Ui.Spacer(6));
             var b1 = Ui.Button("Puzzles", () => App.ShowPuzzleList(), primary: true, size: 20);
             var b2 = Ui.Button("Sandbox  (drive the lights yourself)", () => App.ShowSandbox(), size: 20);
+            var b4 = Ui.Button("Editor  (build a level, export a puzzle)", () => App.ShowEditor(), size: 20);
             var b3 = Ui.Button("Quit", () => GetTree().Quit(), size: 20);
-            foreach (var b in new[] { b1, b2, b3 }) { b.CustomMinimumSize = new Vector2(420, 52); col.AddChild(b); }
+            foreach (var b in new[] { b1, b2, b4, b3 }) { b.CustomMinimumSize = new Vector2(420, 52); col.AddChild(b); }
             col.AddChild(Ui.Spacer(4));
             col.AddChild(Ui.Label("ctrl + / ctrl −  bigger or smaller text", Ui.Small, Orbitope.TextMuted));
             return center;
@@ -72,9 +73,21 @@ namespace SignalGodot
         {
             foreach (var c in _puzzleRows.GetChildren()) c.QueueFree();
             var world = Worlds.All[0];
-            for (int i = 0; i < world.puzzles.Count; i++)
+            AddRows(world.puzzles, world.title);
+            var mine = Store.LoadPuzzles();
+            if (mine.Count > 0)
             {
-                var p = world.puzzles[i];
+                _puzzleRows.AddChild(Ui.Separator());
+                _puzzleRows.AddChild(Ui.Label("YOUR PUZZLES", Ui.Small, Orbitope.TextMuted, Orbitope.Rajdhani));
+                AddRows(mine, "Your puzzles");
+            }
+        }
+
+        private void AddRows(System.Collections.Generic.List<PuzzleDef> set, string setTitle)
+        {
+            for (int i = 0; i < set.Count; i++)
+            {
+                var p = set[i];
                 var row = Ui.Row(14);
                 var num = Ui.Label($"{i + 1,2}", Ui.Heading, Orbitope.TextMuted);
                 num.CustomMinimumSize = new Vector2(40, 0);
@@ -86,7 +99,7 @@ namespace SignalGodot
                 var star = Ui.Label(Ui.Stars(stars), Ui.Body, stars > 0 ? Orbitope.AmberBright : Orbitope.TextMuted);
                 star.CustomMinimumSize = new Vector2(150, 0);
                 row.AddChild(star);
-                var play = Ui.Button(stars > 0 ? "Play again" : "Play", () => App.ShowPuzzle(p), primary: stars == 0);
+                var play = Ui.Button(stars > 0 ? "Play again" : "Play", () => App.ShowPuzzle(p, set, setTitle), primary: stars == 0);
                 play.CustomMinimumSize = new Vector2(140, Ui.ButtonHeight);
                 row.AddChild(play);
                 _puzzleRows.AddChild(row);

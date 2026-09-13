@@ -24,6 +24,11 @@ namespace SignalGodot
 
         public SimRunner Runner;
 
+        /// <summary>Editor: draw the grid and the document's own geometry, so
+        /// the map is visible even while the level is not yet buildable.</summary>
+        public EditorDoc Overlay;
+        public bool ShowGrid;
+
         /// <summary>Selection highlight (puzzle editing). -1 = none.</summary>
         public int SelectedNode = -1, SelectedLink = -1;
         /// <summary>Extra highlight point (e.g. a roundabout's original centre).</summary>
@@ -163,8 +168,45 @@ namespace SignalGodot
             QueueRedraw();
         }
 
+        private void DrawEditorLayer()
+        {
+            if (Overlay == null) return;
+            float s = Overlay.spacing * PixelsPerMeter;
+            if (ShowGrid)
+            {
+                var dot = Orbitope.Border with { A = 0.9f };
+                float r = Legible(1.2f * PixelsPerMeter, 3f);
+                for (int gx = 0; gx < Overlay.cols; gx++)
+                    for (int gy = 0; gy < Overlay.rows; gy++)
+                        DrawCircle(new Vector2(gx, gy) * s, r, dot);
+            }
+            // The document's geometry under the (possibly absent) built roads.
+            var ghost = Orbitope.Border with { A = 0.7f };
+            float w = Legible(2.5f * PixelsPerMeter, 6f);
+            foreach (var st in Overlay.streets)
+                DrawLine(new Vector2(st.ax, st.ay) * s, new Vector2(st.bx, st.by) * s, ghost, w);
+            foreach (var j in Overlay.junctions)
+            {
+                var c = new Vector2(j.gx, j.gy) * s;
+                for (int d = 0; d < 4; d++)
+                    if (j.Open(d) && Overlay.NeighbourVia(j, d, out _) == null)
+                    {
+                        var dir = new Vector2(EditorDoc.DX[d], EditorDoc.DY[d]);
+                        var end = c + dir * Overlay.stub * PixelsPerMeter;
+                        DrawLine(c, end, ghost, w);
+                        float a = Legible(3f * PixelsPerMeter, 8f);
+                        var right = new Vector2(-dir.Y, dir.X);
+                        DrawColoredPolygon(new[] { end + dir * a, end - dir * a * 0.4f + right * a * 0.8f, end - dir * a * 0.4f - right * a * 0.8f }, Orbitope.TextMuted);
+                    }
+                float half = Legible(4f * PixelsPerMeter, 9f);
+                DrawRect(new Rect2(c - new Vector2(half, half), new Vector2(2f * half, 2f * half)), Orbitope.Raised.Lerp(Orbitope.Border, 0.5f));
+                DrawRect(new Rect2(c - new Vector2(half, half), new Vector2(2f * half, 2f * half)), Orbitope.TextMuted, false, Legible(0.6f, 1.5f));
+            }
+        }
+
         public override void _Draw()
         {
+            DrawEditorLayer();
             if (Runner?.Sim == null) return;
             var net = Runner.Sim.Network;
             EnsureArcs(net);

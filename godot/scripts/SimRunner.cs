@@ -87,6 +87,13 @@ namespace SignalGodot
             Snapshot(_prev);
         }
 
+        /// <summary>No level loaded: views draw nothing.</summary>
+        public void Clear()
+        {
+            Sim = null; Ghost = null; Level = null; Finished = false;
+            _tap.Clear(); _prev.Clear(); _curr.Clear(); _accumulator = 0f;
+        }
+
         /// <summary>Same level, same seed, same policies, from the top.</summary>
         public void Reset() { if (Level != null) Load(Level, Seed, _ops, _withGhost, _withTaps); }
 

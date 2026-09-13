@@ -247,6 +247,17 @@ missing, and `--ai=mp` forces it. Retraining is cheap: 600k steps in ~3 min.
 Section 6 MVP, then author Worlds 2 and 3 *with the editor* rather than in
 code. That is the dogfood.
 *Gate:* build the corridor from an empty grid, export it as a puzzle, and play it.
+*Status: MVP built 2026-09-13; gate not yet run by hand.* `EditorDoc` in Core
+is the grid document (junctions on cells, streets between neighbours, arms
+open to the outside, demand preset + total + rush, plus the same EditOp list
+puzzles use); `Build()` derives the `LevelDef`, auto-generates phases, and
+refuses anything that strands a flow. In Godot: Junctions / Streets / Inspect
+modes, a junction panel (control picker, per-arm street direction or
+open-to-outside, remove) on top of the shared `ToolPopup` (roundabout, timed
+plan, bays, no-left), run with live stats, save/load to `user://levels`, and
+Export as puzzle (goals, toolbox ticks, budget, par) to `user://puzzles`,
+which the puzzle list shows under "Your puzzles". Not yet: lanes 1–2 per
+street, per-flow demand painting, undo/redo, scenario templates, diff view.
 
 **P4 — Progression and polish** (2–3 weeks)
 Worlds and star gates, a tutorial that is just World 1 with more text, hints,

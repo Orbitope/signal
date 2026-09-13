@@ -350,6 +350,47 @@ namespace Signal.Core
             return Math.Abs(dx) > Math.Abs(dy) ? (dx > 0 ? "the east" : "the west") : (dy > 0 ? "the north" : "the south");
         }
 
+        /// <summary>"from the north": the map edge an approach comes from, walking
+        /// up through forks. Falls back to the link id.</summary>
+        public static string ApproachName(LevelDef lv, int linkId)
+        {
+            var net = lv.network;
+            var link = net.links.Find(l => l.id == linkId);
+            int hops = 0;
+            while (link != null && hops++ < 4)
+            {
+                var from = net.nodes.Find(n => n.id == link.from);
+                if (from == null) break;
+                if (from.isBoundary) return "from " + NodeName(lv, from.id);
+                if (!from.isBoundary && net.links.FindAll(l => l.to == from.id).Count >= 3) return "from " + NodeName(lv, from.id);
+                link = net.links.Find(l => l.to == from.id);
+            }
+            return $"street {linkId}";
+        }
+
+        public static string ControlName(ControlType c, int axis = 0) => c switch
+        {
+            ControlType.Signalized => "Traffic signal",
+            ControlType.AllWayStop => "All-way stop",
+            ControlType.TwoWayStop => axis == 0 ? "Two-way stop (E-W keeps priority)" : "Two-way stop (N-S keeps priority)",
+            ControlType.YieldEntry => "Yield",
+            _ => "Uncontrolled"
+        };
+
+        /// <summary>One line for an op, for change lists and undo buttons.</summary>
+        public static string Describe(EditOp op, LevelDef lv) => op.kind switch
+        {
+            EditKind.SetControl => ControlName(op.control, op.majorAxis),
+            EditKind.Roundabout => "Roundabout",
+            EditKind.Retime => op.splits != null && op.splits.Count == 2
+                ? $"Timed plan: {op.cycle:F0} s cycle, N-S {op.splits[0] * 100f:F0}% / E-W {op.splits[1] * 100f:F0}%"
+                : $"Timed plan: {op.cycle:F0} s cycle, even split",
+            EditKind.AddBay => $"Left-turn bay {ApproachName(lv, op.link)}",
+            EditKind.TurnBan => $"No left turn {ApproachName(lv, op.link)}",
+            EditKind.OneWay => $"One-way: closed the lane {ApproachName(lv, op.link)}",
+            _ => op.kind.ToString()
+        };
+
         static NodeDef NodeOrThrow(LevelDef lv, int id)
             => lv.network.nodes.Find(n => n.id == id) ?? throw new PuzzleException($"junction {id} no longer exists");
 

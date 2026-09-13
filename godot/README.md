@@ -22,6 +22,14 @@ godot --headless --path . --import
   then replays seed 0 on screen with the goals updating live. Stars save to
   `user://progress.json`. After two failed runs a "show me the answer" button
   appears.
+- **Editor** (`Editor.cs`, GAME_PLAN P3) — grid-snapped. Junctions mode:
+  click a cell to place or remove a junction. Streets mode: click two
+  neighbouring junctions to join or unjoin them. Inspect mode: a junction's
+  control, each arm's direction or "open to the outside", roundabout, timed
+  plan; a street's bay or no-left. Traffic is a preset + total + rush toggle.
+  Run it, Save/Load (`user://levels`), or Export puzzle with goals, a toolbox
+  and a budget (`user://puzzles`), which then appears under Puzzles → Your
+  puzzles. `--editor=1` opens it; `--popup=node|export` for screenshots.
 - **Sandbox** (`Sandbox.cs`, GAME_PLAN P0) — any built-in level from
   `Signal.Core.Levels` or a LevelDef JSON via `--level=path.json`. The game AI
   drives every light; tap an approach to hold it green for 12 s; beat the
@@ -61,12 +69,13 @@ Smoke gate (CI), headless:
 godot --headless --path . res://scenes/smoke.tscn
 ```
 
-36 checks: Core sims under Godot's .NET host, determinism, ghost lockstep,
+39 checks: Core sims under Godot's .NET host, determinism, ghost lockstep,
 fixed-tick accounting, registry levels run, tap override scoping and expiry,
 round finish, edit ops build legal levels (roundabout macro, bays, refusal of
 an edit that strands traffic), every World 1 puzzle fails as given and solves
 with its authored answer, puzzle load honours a timed plan, the trained
-policies load from res:// and drive a grid. Exits nonzero on
+policies load from res:// and drive a grid, an editor document builds, runs
+and round-trips through user:// with an exported puzzle. Exits nonzero on
 failure. `dotnet build` works standalone; the smoke scene needs the godot
 binary (mono build) on PATH.
 
@@ -75,7 +84,9 @@ binary (mono build) on PATH.
 | file | role |
 |---|---|
 | `Main.cs` | app shell: shared world, mode switching, args, HiDPI window, UI scale |
-| `Menu.cs` / `PuzzlePlay.cs` / `Sandbox.cs` | the three modes (CanvasLayers) |
+| `Menu.cs` / `PuzzlePlay.cs` / `Sandbox.cs` / `Editor.cs` | the four modes (CanvasLayers) |
+| `ToolPopup.cs` | the junction/approach tool popup shared by puzzles and the editor |
+| `Store.cs` | user:// JSON for editor documents and exported puzzles |
 | `SimRunner.cs` | the only place Godot time meets sim time; sandbox or puzzle load |
 | `NetworkView.cs` | roads, per-approach control badges, compass, arcs, picking |
 | `VehicleView.cs` | all cars in one MultiMesh, zoom-aware size, wait colour |

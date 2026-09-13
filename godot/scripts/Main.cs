@@ -24,6 +24,7 @@ namespace SignalGodot
         private Menu _menu;
         private Sandbox _sandbox;
         private PuzzlePlay _puzzle;
+        private Editor _editor;
         private CanvasLayer _active;
 
         // --screenshot dev hook
@@ -53,7 +54,8 @@ namespace SignalGodot
             _menu = new Menu { App = this }; AddChild(_menu);
             _sandbox = new Sandbox { App = this }; AddChild(_sandbox);
             _puzzle = new PuzzlePlay { App = this }; AddChild(_puzzle);
-            foreach (var m in new CanvasLayer[] { _menu, _sandbox, _puzzle }) m.Visible = false;
+            _editor = new Editor { App = this }; AddChild(_editor);
+            foreach (var m in new CanvasLayer[] { _menu, _sandbox, _puzzle, _editor }) m.Visible = false;
 
             _shotPath = Arg("screenshot");
             if (_shotPath != null && float.TryParse(Arg("after"), out var shotAt)) _shotAt = shotAt;
@@ -62,10 +64,15 @@ namespace SignalGodot
             string level = Arg("level");
             if (puzzleId != null && Worlds.Find(puzzleId) is PuzzleDef p)
             {
-                ShowPuzzle(p);
+                ShowPuzzle(p, Worlds.All[0].puzzles, Worlds.All[0].title);
                 if (Arg("answer") == "1") _puzzle.LoadAnswer();
                 if (Arg("run") == "1") _puzzle.Run();
                 if (Arg("popup") is string popup) _puzzle.DebugOpenPopup(popup);
+            }
+            else if (Arg("editor") == "1")
+            {
+                ShowEditor();
+                if (Arg("popup") is string popup) _editor.DebugOpen(popup);
             }
             else if (level != null) ShowSandbox(level);
             else ShowMenu();
@@ -118,13 +125,16 @@ namespace SignalGodot
             Runner.TimeScale = 1f;
         }
         public void ShowSandbox(string level = null) { Switch(_sandbox); _sandbox.Enter(level); }
-        public void ShowPuzzle(PuzzleDef p) { Switch(_puzzle); _puzzle.Enter(p); }
+        public void ShowPuzzle(PuzzleDef p, System.Collections.Generic.IList<PuzzleDef> set, string setTitle)
+        { Switch(_puzzle); _puzzle.Enter(p, set, setTitle); }
+        public void ShowEditor() { Switch(_editor); _editor.Enter(); }
 
         private void Switch(CanvasLayer to)
         {
             if (_active == to) return;
             if (_active is Sandbox s) s.Exit();
             if (_active is PuzzlePlay pp) pp.Exit();
+            if (_active is Editor ed) ed.Exit();
             if (_active != null) _active.Visible = false;
             _active = to;
             _active.Visible = true;
