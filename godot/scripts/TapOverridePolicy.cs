@@ -3,7 +3,7 @@ using Signal.Core;
 namespace SignalGodot
 {
     /// <summary>
-    /// The player's signal policy. MaxPressure runs the light on its own; a tap
+    /// The player's signal policy. The game AI (AgingMaxPressurePolicy) runs the light on its own; a tap
     /// overrides it with a requested phase for HoldSeconds of sim time, then
     /// hands control back. This is what makes a 25-signal map playable: the
     /// player intervenes where it matters and the AI keeps everything else
@@ -14,7 +14,7 @@ namespace SignalGodot
     {
         public float HoldSeconds = 12f;
 
-        private readonly MaxPressurePolicy _auto = new MaxPressurePolicy();
+        private readonly AgingMaxPressurePolicy _auto = new AgingMaxPressurePolicy();
         private int _phase = -1;
         private float _until = -1f;
 

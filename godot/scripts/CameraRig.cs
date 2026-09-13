@@ -5,7 +5,9 @@ namespace SignalGodot
     /// <summary>
     /// Camera for any network size: fit-to-bounds on load, wheel zoom about the
     /// cursor, drag to pan (middle or right button), WASD / arrows to pan, F to
-    /// refit. Tap handling lives in Main; this only consumes wheel and drags.
+    /// refit. Click handling lives in the modes; this only consumes wheel and
+    /// drags. InsetLeft reserves screen space on the left (a side panel) so the
+    /// fit centres the network in what remains.
     /// </summary>
     public partial class CameraRig : Camera2D
     {
@@ -13,6 +15,8 @@ namespace SignalGodot
         [Export] public float MaxZoom = 6f;
         [Export] public float ZoomStep = 1.15f;
         [Export] public float PanSpeed = 900f;   // screen px per second
+
+        public float InsetLeft;                  // logical px reserved on the left
 
         private Rect2 _fit;
         private bool _hasFit;
@@ -27,11 +31,13 @@ namespace SignalGodot
         {
             _fit = world; _hasFit = true;
             var vp = GetViewportRect().Size;
-            float zx = vp.X / Mathf.Max(world.Size.X, 1f);
+            float availW = Mathf.Max(vp.X - InsetLeft, 100f);
+            float zx = availW / Mathf.Max(world.Size.X, 1f);
             float zy = vp.Y / Mathf.Max(world.Size.Y, 1f);
             float z = Mathf.Clamp(Mathf.Min(zx, zy) * pad, MinZoom, MaxZoom);
             Zoom = new Vector2(z, z);
-            Position = world.GetCenter();
+            // The screen centre sits InsetLeft/2 left of the centre of the free area.
+            Position = world.GetCenter() - new Vector2(InsetLeft * 0.5f / z, 0f);
         }
 
         public void Refit() { if (_hasFit) FitTo(_fit); }

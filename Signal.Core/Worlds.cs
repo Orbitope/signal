@@ -113,6 +113,7 @@ namespace Signal.Core
                 toolbox = { Tools.AllWayStop(), Tools.TwoWayStop(), Tools.Signal() },
                 budget = 20, par = 8,
                 objectives = { Avg(7.5f) },
+                answer = { new EditOp { kind = EditKind.SetControl, node = Center, control = ControlType.TwoWayStop, majorAxis = 1 } },
             });
 
             // 2. Heavy traffic: the stop sign collapses, the signal holds.
@@ -125,6 +126,7 @@ namespace Signal.Core
                 toolbox = { Tools.AllWayStop(), Tools.TwoWayStop(), Tools.Signal() },
                 budget = 50, par = 40,
                 objectives = { Avg(35f), Max(100f) },
+                answer = { new EditOp { kind = EditKind.SetControl, node = Center, control = ControlType.Signalized } },
             });
 
             // 3. Balanced flows: the roundabout wins by a mile.
@@ -137,6 +139,7 @@ namespace Signal.Core
                 toolbox = { Tools.AllWayStop(), Tools.TwoWayStop(), Tools.Signal(), Tools.Roundabout() },
                 budget = 60, par = 60,
                 objectives = { Avg(10.5f) },
+                answer = { new EditOp { kind = EditKind.Roundabout, node = Center } },
             });
 
             // 4. The roundabout trap: one dominant flow monopolizes the circle.
@@ -150,6 +153,7 @@ namespace Signal.Core
                 toolbox = { Tools.AllWayStop(), Tools.TwoWayStop(), Tools.Signal(), Tools.Roundabout() },
                 budget = 60, par = 40,
                 objectives = { Avg(30f), Max(110f) },
+                answer = { new EditOp { kind = EditKind.SetControl, node = Center, control = ControlType.Signalized } },
             });
 
             // 5. Side street: give the arterial priority.
@@ -162,6 +166,7 @@ namespace Signal.Core
                 toolbox = { Tools.AllWayStop(), Tools.TwoWayStop(), Tools.Signal() },
                 budget = 40, par = 8,
                 objectives = { Avg(6f), Max(60f) },
+                answer = { new EditOp { kind = EditKind.SetControl, node = Center, control = ControlType.TwoWayStop, majorAxis = 0 } },
             });
 
             // 6. Left turns block the through lane; a bay + protected phase fixes it.
@@ -175,6 +180,7 @@ namespace Signal.Core
                 toolbox = { Tools.TurnBay(), Tools.TimedPlan(), Tools.AllWayStop(), Tools.TwoWayStop() },
                 budget = 60, par = 50,
                 objectives = { Avg(36f) },
+                answer = { new EditOp { kind = EditKind.Retime, node = Center, cycle = 80f }, new EditOp { kind = EditKind.AddBay, link = InN }, new EditOp { kind = EditKind.AddBay, link = InS } },
             });
 
             // 7. Fairness: the timed plan that starves the side street.
@@ -201,6 +207,7 @@ namespace Signal.Core
                 toolbox = { Tools.AllWayStop(), Tools.TwoWayStop(), Tools.Signal(), Tools.Roundabout() },
                 budget = 60, par = 40,
                 objectives = { Avg(45f), Max(120f) },
+                answer = { new EditOp { kind = EditKind.SetControl, node = Center, control = ControlType.Signalized } },
             });
 
             foreach (var p in w.puzzles) p.level.name = p.title;

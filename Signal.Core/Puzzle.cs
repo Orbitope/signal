@@ -142,6 +142,9 @@ namespace Signal.Core
         public List<int> seeds = new List<int> { 1, 2, 3 };
         public List<ObjectiveDef> objectives = new List<ObjectiveDef>();
         public float aiDecisionInterval = 5f;
+        /// <summary>The authored answer (full op list, not a diff). Tests verify it
+        /// solves under the current sim; the game can reveal it.</summary>
+        public List<EditOp> answer = new List<EditOp>();
 
         public ToolDef ToolFor(EditOp op)
         {

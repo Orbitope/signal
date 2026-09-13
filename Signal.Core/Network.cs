@@ -82,6 +82,7 @@ namespace Signal.Core
         public Node NodeById(int id) => _nodeById[id];
         public Link LinkById(int id) => _linkById[id];
         public bool TryNode(int id, out Node n) => _nodeById.TryGetValue(id, out n);
+        public bool TryLink(int id, out Link l) => _linkById.TryGetValue(id, out l);
 
         public static RoadNetwork Build(NetworkDef def)
         {

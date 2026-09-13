@@ -11,10 +11,12 @@ namespace SignalGodot
     /// last two sim states. Views read from this node; nothing writes to Core
     /// except phase requests through each signal's TapOverridePolicy.
     ///
-    /// Two sims run in lockstep on identical seed and demand: the player's,
-    /// where MaxPressure drives every light and taps override one at a time,
-    /// and the ghost, plain MaxPressure everywhere. "The AI faced identical
-    /// traffic" is true by construction.
+    /// Two ways to load:
+    /// - Sandbox: the game AI drives every light, taps override one at a time,
+    ///   and a lockstep ghost (plain game AI, same seed) is the opponent.
+    /// - Puzzle: the level already has the player's edits applied; policies
+    ///   come from Edits.AttachPolicies (AI everywhere, timed plans where the
+    ///   player set one), no taps, no ghost.
     /// </summary>
     public partial class SimRunner : Godot.Node
     {
@@ -22,13 +24,15 @@ namespace SignalGodot
         [Export] public float DecisionInterval = 5f;   // MaxPressure needs ~5 s or it thrashes
 
         public SimCore Sim { get; private set; }
-        public SimCore Ghost { get; private set; } // lockstep MaxPressure opponent
+        public SimCore Ghost { get; private set; } // lockstep opponent (sandbox only; null in puzzles)
         public LevelDef Level { get; private set; }
         public ulong Seed { get; private set; }
         public float Alpha { get; private set; }   // interpolation fraction for views
         public bool Finished { get; private set; }
 
         private readonly Dictionary<int, TapOverridePolicy> _tap = new();
+        private List<EditOp> _ops;
+        private bool _withGhost = true, _withTaps = true;
         private float _accumulator;
 
         // Interpolation snapshots: vehicle id -> (linkId, pos) at the last two ticks.
@@ -38,26 +42,42 @@ namespace SignalGodot
         [Signal] public delegate void SpillbackEventHandler(int linkId);
         [Signal] public delegate void FinishedRoundEventHandler();
 
-        public void Load(LevelDef level, ulong seed)
+        /// <summary>Sandbox load: game AI + taps + ghost.</summary>
+        public void Load(LevelDef level, ulong seed) => Load(level, seed, null, true, true);
+
+        public void Load(LevelDef level, ulong seed, IList<EditOp> ops, bool withGhost, bool withTaps)
         {
             Level = level; Seed = seed;
+            _ops = ops == null ? null : new List<EditOp>(ops);
+            _withGhost = withGhost; _withTaps = withTaps;
             Finished = false; _accumulator = 0f; Alpha = 0f;
             _tap.Clear();
 
             Sim = new SimCore(level, seed);
-            foreach (var node in Sim.Network.Nodes)
-                if (node.Control is SignalController ctl)
-                {
-                    var p = new TapOverridePolicy();
-                    _tap[node.Id] = p;
-                    ctl.Policy = p;
-                    ctl.DecisionInterval = DecisionInterval;
-                }
+            if (_ops != null) Edits.AttachPolicies(Sim, _ops, DecisionInterval);
+            else
+                foreach (var node in Sim.Network.Nodes)
+                    if (node.Control is SignalController ctl)
+                    { ctl.Policy = new AgingMaxPressurePolicy(); ctl.DecisionInterval = DecisionInterval; }
 
-            Ghost = new SimCore(level, seed);
-            foreach (var node in Ghost.Network.Nodes)
-                if (node.Control is SignalController ctl)
-                { ctl.Policy = new MaxPressurePolicy(); ctl.DecisionInterval = DecisionInterval; }
+            if (_withTaps)
+                foreach (var node in Sim.Network.Nodes)
+                    if (node.Control is SignalController ctl && !(ctl.Policy is FixedTimePolicy))
+                    {
+                        var p = new TapOverridePolicy();
+                        _tap[node.Id] = p;
+                        ctl.Policy = p;
+                        ctl.DecisionInterval = DecisionInterval;
+                    }
+
+            Ghost = null;
+            if (_withGhost)
+            {
+                Ghost = new SimCore(level, seed);
+                foreach (var node in Ghost.Network.Nodes)
+                    if (node.Control is SignalController ctl)
+                    { ctl.Policy = new AgingMaxPressurePolicy(); ctl.DecisionInterval = DecisionInterval; }
+            }
 
             Sim.SpillbackStarted += linkId =>
                 CallDeferred(Godot.Node.MethodName.EmitSignal, SignalName.Spillback, linkId);
@@ -66,23 +86,24 @@ namespace SignalGodot
             Snapshot(_prev);
         }
 
-        /// <summary>Same level, same seed, from the top.</summary>
-        public void Reset() { if (Level != null) Load(Level, Seed); }
+        /// <summary>Same level, same seed, same policies, from the top.</summary>
+        public void Reset() { if (Level != null) Load(Level, Seed, _ops, _withGhost, _withTaps); }
 
         public override void _Process(double delta)
         {
             if (Sim == null || TimeScale <= 0f || Finished) return;
             _accumulator += (float)delta * TimeScale;
 
-            // Cap catch-up work per frame so a hitch can't spiral.
-            int safety = 30;
+            // Cap catch-up work per frame so a hitch can't spiral; at high time
+            // scales the cap is what bounds frame time, not the accumulator.
+            int safety = TimeScale >= 8f ? 120 : 30;
             while (_accumulator >= SimConfig.DT && safety-- > 0)
             {
                 _accumulator -= SimConfig.DT;
                 _prev.Clear();
                 foreach (var kv in _curr) _prev[kv.Key] = kv.Value;
                 Sim.Step();
-                Ghost.Step();
+                Ghost?.Step();
                 Snapshot(_curr);
                 if (Sim.Time >= Level.duration)
                 {
@@ -91,6 +112,7 @@ namespace SignalGodot
                     break;
                 }
             }
+            if (_accumulator > SimConfig.DT * 4f) _accumulator = SimConfig.DT * 4f;   // drop, don't hoard
             Alpha = Mathf.Clamp(_accumulator / SimConfig.DT, 0f, 1f);
         }
 
@@ -137,6 +159,15 @@ namespace SignalGodot
         public float OverrideRemaining(int nodeId)
             => Sim != null && _tap.TryGetValue(nodeId, out var t) ? t.Remaining(Sim.Time) : 0f;
 
-        public int SignalCount => _tap.Count;
+        public int SignalCount
+        {
+            get
+            {
+                if (Sim == null) return 0;
+                int n = 0;
+                foreach (var node in Sim.Network.Nodes) if (node.Control is SignalController) n++;
+                return n;
+            }
+        }
     }
 }

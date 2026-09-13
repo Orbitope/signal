@@ -15,11 +15,11 @@ namespace SignalGodot
         public SimRunner Runner;
         public NetworkView Net;
 
-        [Export] public float MinScreenLength = 12f;   // never draw a car shorter than this on screen
+        [Export] public float MinScreenLength = 20f;   // never draw a car shorter than this on screen
 
         // Steel = calm flow; ramp to Amber, then AmberBright, as wait climbs.
         // Never coral (reserved for spillback).
-        private static readonly Color Calm = Orbitope.Steel;
+        private static readonly Color Calm = Orbitope.SteelBright;
         private static readonly Color Warm = Orbitope.Amber;
         private static readonly Color Hot = Orbitope.AmberBright;
         private const int MaxInstances = 4096;
@@ -52,9 +52,7 @@ namespace SignalGodot
             {
                 if (i >= MaxInstances) break;
                 var link = net.LinkById(linkId);
-                var (a, b) = Net.LinkLine(link);
-                var dir = (b - a).Normalized();
-                var world = a.Lerp(b, Mathf.Clamp(pos / link.Length, 0f, 1f));
+                var (world, dir) = Net.Pose(link, pos);
 
                 Multimesh.SetInstanceTransform2D(i, new Transform2D(dir.Angle(), scale, 0f, world));
 

@@ -43,6 +43,10 @@ namespace Signal.Core
         /// <summary>Authoring hook: swap the AI that runs the lights (null = MaxPressure).</summary>
         public static Func<SignalController, ISignalPolicy> AiOverride;
 
+        /// <summary>The sim seed for a puzzle seed index. The game replays seed 0
+        /// on screen with exactly this, so what the player watches is what was scored.</summary>
+        public static ulong SeedFor(PuzzleDef puzzle, int index) => (ulong)puzzle.seeds[index] * 7919UL + 17UL;
+
         public static PuzzleResult Evaluate(PuzzleDef puzzle, IList<EditOp> ops, Action<int, Simulation> onSeedDone = null)
         {
             var r = new PuzzleResult();
@@ -63,7 +67,7 @@ namespace Signal.Core
             int steps = (int)Math.Round(level.duration / SimConfig.DT);
             for (int s = 0; s < n; s++)
             {
-                var sim = new Simulation(level, (ulong)puzzle.seeds[s] * 7919UL + 17UL);
+                var sim = new Simulation(level, SeedFor(puzzle, s));
                 Edits.AttachPolicies(sim, ops, puzzle.aiDecisionInterval, AiOverride);
                 for (int i = 0; i < steps; i++) sim.Step();
                 onSeedDone?.Invoke(s, sim);
@@ -99,6 +103,7 @@ namespace Signal.Core
             var initial = puzzle.initialOps;
             list.Add(("as given", new List<EditOp>(initial)));
             if (initial.Count > 0) list.Add(("initial ops removed", new List<EditOp>()));
+            if (puzzle.answer != null) list.Add(("AUTHORED ANSWER", new List<EditOp>(puzzle.answer)));
 
             foreach (var tool in puzzle.toolbox)
             {
