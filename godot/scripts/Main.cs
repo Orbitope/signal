@@ -1,49 +1,120 @@
 using Godot;
+using System.Collections.Generic;
 using Signal.Core;
 
 namespace SignalGodot
 {
     /// <summary>
-    /// Tactical-mode slice: one signalized four-way, tap approaches for green,
-    /// race the lockstep MaxPressure ghost on identical demand. Keys: space
-    /// pause, 1/2/4 speed. This is milestone M2 running in Godot.
+    /// P0: the level player. Loads any built-in level (or a LevelDef JSON via
+    /// --level=path.json), fits the camera, runs the player's sim against the
+    /// lockstep MaxPressure ghost, and shows a results panel when the round
+    /// ends. MaxPressure drives every light; tap an approach to hold it green.
+    ///
+    /// Keys: space pause · 1/2/4 speed · R restart · [ ] previous/next level
+    ///       F refit camera · wheel zoom · middle/right-drag or WASD pan
     /// </summary>
     public partial class Main : Node2D
     {
+        private const ulong Seed = 20260817;
+
         private SimRunner _runner;
         private NetworkView _net;
         private VehicleView _vehicles;
-        private Label _hud;
-        private Camera2D _cam;
+        private CameraRig _cam;
+
+        private Label _title, _hud, _hint;
+        private OptionButton _pick;
+        private PanelContainer _results;
+        private Label _resultsTitle, _resultsText;
+
+        private readonly List<string> _names = new();
+        private int _levelIdx;
 
         public override void _Ready()
         {
             _runner = new SimRunner();
             AddChild(_runner);
-
-            var level = new LevelDef
-            {
-                name = "fourway-tactical",
-                network = NetworkBuilder.FourWay(ControlType.Signalized),
-                demand = NetworkBuilder.SymmetricDemand(26f),
-                duration = 180f
-            };
-            _runner.Load(level, seed: 20260817);
+            _runner.Spillback += linkId => _net.FlashSpillback(linkId);
+            _runner.FinishedRound += OnFinishedRound;
 
             _net = new NetworkView { Runner = _runner };
             AddChild(_net);
             _vehicles = new VehicleView { Runner = _runner, Net = _net };
             AddChild(_vehicles);
 
-            _cam = new Camera2D { Zoom = new Vector2(1.4f, 1.4f), Position = Vector2.Zero };
+            _cam = new CameraRig();
             AddChild(_cam);
             _cam.MakeCurrent();
 
-            var hudLayer = new CanvasLayer();
-            AddChild(hudLayer);
+            BuildHud();
+            BuildResults();
 
-            // HUD: Surface panel, Rajdhani title, JetBrains Mono stats.
-            var panel = new PanelContainer { Position = new Vector2(10, 10) };
+            _names.AddRange(Levels.Names);
+            string want = ParseLevelArg() ?? "sc-couplet";
+            int idx = _names.IndexOf(want);
+            if (idx < 0)
+            {
+                // Not a built-in: treat it as a JSON path and append it to the list.
+                _names.Add(want);
+                idx = _names.Count - 1;
+                _pick.AddItem(want);
+            }
+            LoadLevel(idx);
+        }
+
+        // ------------------------------------------------------------ levels
+
+        private static string ParseLevelArg()
+        {
+            var args = OS.GetCmdlineUserArgs();
+            for (int i = 0; i < args.Length; i++)
+            {
+                if (args[i].StartsWith("--level=")) return args[i].Substring("--level=".Length);
+                if (args[i] == "--level" && i + 1 < args.Length) return args[i + 1];
+            }
+            return null;
+        }
+
+        private void LoadLevel(int idx)
+        {
+            _levelIdx = ((idx % _names.Count) + _names.Count) % _names.Count;
+            string name = _names[_levelIdx];
+            LevelDef level;
+            try { level = LevelLoader.Load(name); }
+            catch (System.Exception e)
+            {
+                GD.PushError($"could not load level '{name}': {e.Message}");
+                return;
+            }
+
+            _runner.Load(level, Seed);
+            _runner.TimeScale = 1f;
+            _results.Visible = false;
+            _pick.Selected = _levelIdx;
+            _title.Text = level.name.ToUpperInvariant();
+            FitCamera();
+        }
+
+        private void FitCamera()
+        {
+            var net = _runner.Sim.Network;
+            var min = new Vector2(float.MaxValue, float.MaxValue);
+            var max = new Vector2(float.MinValue, float.MinValue);
+            foreach (var n in net.Nodes)
+            {
+                var p = _net.ToWorld(n.X, n.Y);
+                min = min.Min(p); max = max.Max(p);
+            }
+            float margin = 40f * _net.PixelsPerMeter;
+            var rect = new Rect2(min - new Vector2(margin, margin),
+                                 (max - min) + new Vector2(2f * margin, 2f * margin));
+            _cam.FitTo(rect);
+        }
+
+        // --------------------------------------------------------------- hud
+
+        private StyleBoxFlat PanelStyle()
+        {
             var style = new StyleBoxFlat
             {
                 BgColor = Orbitope.Surface with { A = 0.92f },
@@ -54,30 +125,106 @@ namespace SignalGodot
                 CornerRadiusBottomLeft = 4, CornerRadiusBottomRight = 4,
             };
             style.SetBorderWidthAll(1);
-            panel.AddThemeStyleboxOverride("panel", style);
-            hudLayer.AddChild(panel);
+            return style;
+        }
+
+        private Label MakeLabel(FontFile font, int size, Color color, string text = "")
+        {
+            var l = new Label { Text = text };
+            l.AddThemeFontOverride("font", font);
+            l.AddThemeFontSizeOverride("font_size", size);
+            l.AddThemeColorOverride("font_color", color);
+            return l;
+        }
+
+        private void BuildHud()
+        {
+            var layer = new CanvasLayer();
+            AddChild(layer);
+
+            var panel = new PanelContainer { Position = new Vector2(10, 10) };
+            panel.AddThemeStyleboxOverride("panel", PanelStyle());
+            layer.AddChild(panel);
 
             var col = new VBoxContainer();
             panel.AddChild(col);
 
-            _title = new Label { Text = "SIGNAL" };
-            _title.AddThemeFontOverride("font", Orbitope.Rajdhani);
-            _title.AddThemeFontSizeOverride("font_size", 20);
-            _title.AddThemeColorOverride("font_color", Orbitope.TextBright);
-            col.AddChild(_title);
+            var top = new HBoxContainer();
+            col.AddChild(top);
+            _title = MakeLabel(Orbitope.Rajdhani, 20, Orbitope.TextBright, "SIGNAL");
+            top.AddChild(_title);
 
-            _hud = new Label();
-            _hud.AddThemeFontOverride("font", Orbitope.Mono);
-            _hud.AddThemeFontSizeOverride("font_size", 13);
-            _hud.AddThemeColorOverride("font_color", Orbitope.TextPrimary);
+            _pick = new OptionButton();
+            _pick.AddThemeFontOverride("font", Orbitope.Mono);
+            _pick.AddThemeFontSizeOverride("font_size", 12);
+            foreach (var n in Levels.Names) _pick.AddItem(n);
+            _pick.ItemSelected += idx => LoadLevel((int)idx);
+            top.AddChild(_pick);
+
+            _hud = MakeLabel(Orbitope.Mono, 13, Orbitope.TextPrimary);
             col.AddChild(_hud);
-
-            _runner.Spillback += OnSpillback;
+            _hint = MakeLabel(Orbitope.Mono, 11, Orbitope.TextMuted,
+                "tap an approach to hold it green · space pause · 1/2/4 speed · R restart · [ ] level · F fit");
+            col.AddChild(_hint);
         }
 
-        private Label _title;
+        private void BuildResults()
+        {
+            var layer = new CanvasLayer();
+            AddChild(layer);
 
-        private void OnSpillback(int linkId) => _net.FlashSpillback(linkId);
+            var center = new CenterContainer();
+            center.SetAnchorsPreset(Control.LayoutPreset.FullRect);
+            layer.AddChild(center);
+
+            _results = new PanelContainer { Visible = false };
+            _results.AddThemeStyleboxOverride("panel", PanelStyle());
+            center.AddChild(_results);
+
+            var col = new VBoxContainer();
+            _results.AddChild(col);
+
+            _resultsTitle = MakeLabel(Orbitope.Rajdhani, 24, Orbitope.TextBright, "ROUND OVER");
+            col.AddChild(_resultsTitle);
+            _resultsText = MakeLabel(Orbitope.Mono, 13, Orbitope.TextPrimary);
+            col.AddChild(_resultsText);
+
+            var row = new HBoxContainer();
+            col.AddChild(row);
+            var restart = new Button { Text = "Restart (R)" };
+            restart.Pressed += Restart;
+            row.AddChild(restart);
+            var next = new Button { Text = "Next level (])" };
+            next.Pressed += () => LoadLevel(_levelIdx + 1);
+            row.AddChild(next);
+        }
+
+        // ------------------------------------------------------------ round
+
+        private void Restart()
+        {
+            _runner.Reset();
+            _runner.TimeScale = 1f;
+            _results.Visible = false;
+        }
+
+        private void OnFinishedRound()
+        {
+            var you = _runner.Sim.Metrics;
+            var ai = _runner.Ghost.Metrics;
+            float yw = you.LiveAvgWait(_runner.Sim), aw = ai.LiveAvgWait(_runner.Ghost);
+            bool win = yw <= aw;
+            _resultsTitle.Text = win ? "YOU BEAT THE AI" : "THE AI WINS";
+            _resultsTitle.AddThemeColorOverride("font_color", win ? Orbitope.AmberBright : Orbitope.TextSecondary);
+            _resultsText.Text =
+                $"{_runner.Level.name}  ·  {_runner.Level.duration:F0} s\n\n" +
+                $"                you      AI\n" +
+                $"avg wait     {yw,6:F1}s  {aw,6:F1}s\n" +
+                $"cars done    {you.Completed,6}   {ai.Completed,6}\n" +
+                $"worst wait   {you.MaxWait,6:F0}s  {ai.MaxWait,6:F0}s\n" +
+                $"spillbacks   {you.SpillbackEvents,6}   {ai.SpillbackEvents,6}";
+            _results.Visible = true;
+        }
 
         public override void _Process(double delta)
         {
@@ -87,35 +234,38 @@ namespace SignalGodot
             string lead = you <= ghost ? "you lead" : "AI leads";
             _title.AddThemeColorOverride("font_color",
                 you <= ghost ? Orbitope.TextBright : Orbitope.TextSecondary);
-            _hud.Text = $"t {_runner.Sim.Time,5:F0}s   speed {_runner.TimeScale:F0}x\n" +
+            string speed = _runner.TimeScale <= 0f ? "paused" : $"{_runner.TimeScale:F0}x";
+            _hud.Text = $"t {_runner.Sim.Time,5:F0}s / {_runner.Level.duration:F0}s   {speed}   {_runner.SignalCount} signals\n" +
                         $"avg wait  you {you,5:F1}s   AI {ghost,5:F1}s   ({lead})\n" +
-                        $"in system {_runner.Sim.VehiclesInSystem()}   done {_runner.Sim.Metrics.Completed}\n" +
-                        $"tap an approach for green - space pause, 1/2/4 speed";
+                        $"in system {_runner.Sim.VehiclesInSystem()}   done {_runner.Sim.Metrics.Completed}   " +
+                        $"spillbacks {_runner.Sim.Metrics.SpillbackEvents}";
         }
+
+        // ------------------------------------------------------------ input
 
         public override void _UnhandledInput(InputEvent ev)
         {
             switch (ev)
             {
-                case InputEventMouseButton { Pressed: true, ButtonIndex: MouseButton.Left } mb:
+                case InputEventMouseButton { Pressed: true, ButtonIndex: MouseButton.Left }:
                 {
-                    var world = _net.GetGlobalTransform().AffineInverse() * _cam.GetGlobalTransform()
-                                * ((mb.Position - GetViewportRect().Size / 2f) / _cam.Zoom);
-                    // Simpler + correct for a centered, unrotated camera:
-                    world = (mb.Position - GetViewportRect().Size / 2f) / _cam.Zoom + _cam.Position;
+                    if (_results.Visible) break;
+                    var world = _net.GetGlobalMousePosition();
                     if (_net.TryPickApproach(world, out int nodeId, out int inLink))
                         _runner.RequestGreenFor(nodeId, inLink);
                     break;
                 }
-                case InputEventKey { Pressed: true } k:
-                    _runner.TimeScale = k.Keycode switch
+                case InputEventKey { Pressed: true, Echo: false } k:
+                    switch (k.Keycode)
                     {
-                        Key.Space => _runner.TimeScale > 0f ? 0f : 1f,
-                        Key.Key1 => 1f,
-                        Key.Key2 => 2f,
-                        Key.Key4 => 4f,
-                        _ => _runner.TimeScale
-                    };
+                        case Key.Space: _runner.TimeScale = _runner.TimeScale > 0f ? 0f : 1f; break;
+                        case Key.Key1: _runner.TimeScale = 1f; break;
+                        case Key.Key2: _runner.TimeScale = 2f; break;
+                        case Key.Key4: _runner.TimeScale = 4f; break;
+                        case Key.R: Restart(); break;
+                        case Key.Bracketleft: LoadLevel(_levelIdx - 1); break;
+                        case Key.Bracketright: LoadLevel(_levelIdx + 1); break;
+                    }
                     break;
             }
         }

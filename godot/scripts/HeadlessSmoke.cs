@@ -6,10 +6,12 @@ namespace SignalGodot
 {
     /// <summary>
     /// CI gate: run with
-    ///   godot --headless res://scenes/smoke.tscn
+    ///   godot --headless --path . res://scenes/smoke.tscn
     /// Steps the sim inside Godot's .NET runtime and exits nonzero on failure.
-    /// Verifies the three things the engine port could plausibly break:
-    /// Core loads, determinism survives Godot's runtime, ghost stays lockstep.
+    /// Verifies what the engine port could plausibly break (Core loads,
+    /// determinism survives Godot's runtime, ghost stays lockstep) plus the P0
+    /// level-player contract: built-in levels load through the registry and run,
+    /// and a tap overrides exactly one signal and then hands back to the AI.
     /// </summary>
     public partial class HeadlessSmoke : Godot.Node
     {
@@ -57,9 +59,49 @@ namespace SignalGodot
             Check(System.Math.Abs(runner.Sim.StepCount - expected) <= 2,
                   $"fixed-tick accounting ({runner.Sim.StepCount} steps for {fed:F1}s fed, expected ~{expected})");
 
-            // 4) Tap routing reaches the controller.
-            runner.RequestGreenFor(NetworkBuilder.Center, 2);   // E approach
-            Check(true, "tap request routed without exception");
+            // 4) A tap reaches the controller and marks that signal as overridden.
+            var center = runner.Sim.Network.NodeById(NetworkBuilder.Center);
+            runner.RequestGreenFor(NetworkBuilder.Center, center.InLinks[0]);
+            Check(runner.IsOverriding(NetworkBuilder.Center), "tap override active on the tapped signal");
+
+            // 5) P0: multi-signal built-in levels load through the registry and run.
+            foreach (var name in new[] { "grid3", "sc-couplet", "corridor" })
+            {
+                var r = new SimRunner();
+                AddChild(r);
+                r.Load(LevelLoader.Load(name), 5);
+                for (int i = 0; i < 900; i++) r._Process(0.1);   // 90 sim-seconds
+                Check(r.Sim.Metrics.Completed > 0 && r.Sim.VehiclesInSystem() > 0 && r.SignalCount > 1,
+                      $"{name} runs ({r.SignalCount} signals, {r.Sim.Metrics.Completed} done, {r.Sim.VehiclesInSystem()} in system)");
+            }
+
+            // 6) A tap overrides only its own signal, and expires back to MaxPressure.
+            {
+                var r = new SimRunner();
+                AddChild(r);
+                r.Load(LevelLoader.Load("grid2"), 3);
+                int first = -1, second = -1;
+                foreach (var n in r.Sim.Network.Nodes)
+                    if (n.Control is SignalController) { if (first < 0) first = n.Id; else if (second < 0) second = n.Id; }
+                var node = r.Sim.Network.NodeById(first);
+                r.RequestGreenFor(first, node.InLinks[0]);
+                Check(r.IsOverriding(first), "tap overrides its own signal");
+                Check(!r.IsOverriding(second), "tap does not touch other signals");
+                for (int i = 0; i < 140; i++) r._Process(0.1);   // 14 s > 12 s hold
+                Check(!r.IsOverriding(first), "override expires and hands back to the AI");
+            }
+
+            // 7) A round finishes at the level's duration and fires exactly once.
+            {
+                var r = new SimRunner();
+                AddChild(r);
+                var shortLevel = LevelLoader.Load("fourway");
+                shortLevel.duration = 20f;
+                r.Load(shortLevel, 11);
+                for (int i = 0; i < 400; i++) r._Process(0.1);   // 40 s fed, should stop at 20 s
+                Check(r.Finished && r.Sim.Time >= 20f && r.Sim.Time < 21f,
+                      $"round finishes at duration (t={r.Sim.Time:F1}s)");
+            }
 
             GD.Print(failures == 0 ? "SMOKE PASSED" : $"{failures} SMOKE FAILURES");
             GetTree().Quit(failures);

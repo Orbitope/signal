@@ -125,6 +125,10 @@ namespace SignalGodot
                     }
                     DrawLine(barCenter - right * 6f, barCenter + right * 6f, c, 3.5f);
                 }
+                // Player override: an amber ring on a light being held by a tap.
+                if (Runner.IsOverriding(node.Id))
+                    DrawArc(ToWorld(node.X, node.Y), 9f * PixelsPerMeter / 2.2f, 0f, Mathf.Tau, 32,
+                            Orbitope.AmberBright, 2.5f);
             }
         }
 
