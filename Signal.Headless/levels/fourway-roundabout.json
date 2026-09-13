@@ -1,0 +1,362 @@
+{
+  "name": "fourway-roundabout",
+  "network": {
+    "nodes": [
+      {
+        "id": 10,
+        "x": 0,
+        "y": 15,
+        "isBoundary": false,
+        "control": "YieldEntry",
+        "phases": null,
+        "majorInLinks": [
+          4
+        ],
+        "minGreen": 5,
+        "yellow": 3,
+        "allRed": 1,
+        "stopServiceTime": 2,
+        "gapThreshold": 4
+      },
+      {
+        "id": 100,
+        "x": 0,
+        "y": 150,
+        "isBoundary": true,
+        "control": "Uncontrolled",
+        "phases": null,
+        "majorInLinks": null,
+        "minGreen": 5,
+        "yellow": 3,
+        "allRed": 1,
+        "stopServiceTime": 2,
+        "gapThreshold": 4
+      },
+      {
+        "id": 11,
+        "x": 15,
+        "y": 0,
+        "isBoundary": false,
+        "control": "YieldEntry",
+        "phases": null,
+        "majorInLinks": [
+          3
+        ],
+        "minGreen": 5,
+        "yellow": 3,
+        "allRed": 1,
+        "stopServiceTime": 2,
+        "gapThreshold": 4
+      },
+      {
+        "id": 101,
+        "x": 150,
+        "y": 0,
+        "isBoundary": true,
+        "control": "Uncontrolled",
+        "phases": null,
+        "majorInLinks": null,
+        "minGreen": 5,
+        "yellow": 3,
+        "allRed": 1,
+        "stopServiceTime": 2,
+        "gapThreshold": 4
+      },
+      {
+        "id": 12,
+        "x": 0,
+        "y": -15,
+        "isBoundary": false,
+        "control": "YieldEntry",
+        "phases": null,
+        "majorInLinks": [
+          2
+        ],
+        "minGreen": 5,
+        "yellow": 3,
+        "allRed": 1,
+        "stopServiceTime": 2,
+        "gapThreshold": 4
+      },
+      {
+        "id": 102,
+        "x": 0,
+        "y": -150,
+        "isBoundary": true,
+        "control": "Uncontrolled",
+        "phases": null,
+        "majorInLinks": null,
+        "minGreen": 5,
+        "yellow": 3,
+        "allRed": 1,
+        "stopServiceTime": 2,
+        "gapThreshold": 4
+      },
+      {
+        "id": 13,
+        "x": -15,
+        "y": 0,
+        "isBoundary": false,
+        "control": "YieldEntry",
+        "phases": null,
+        "majorInLinks": [
+          1
+        ],
+        "minGreen": 5,
+        "yellow": 3,
+        "allRed": 1,
+        "stopServiceTime": 2,
+        "gapThreshold": 4
+      },
+      {
+        "id": 103,
+        "x": -150,
+        "y": 0,
+        "isBoundary": true,
+        "control": "Uncontrolled",
+        "phases": null,
+        "majorInLinks": null,
+        "minGreen": 5,
+        "yellow": 3,
+        "allRed": 1,
+        "stopServiceTime": 2,
+        "gapThreshold": 4
+      }
+    ],
+    "links": [
+      {
+        "id": 1,
+        "from": 10,
+        "to": 13,
+        "length": 23.561945,
+        "speedLimit": 8
+      },
+      {
+        "id": 2,
+        "from": 13,
+        "to": 12,
+        "length": 23.561945,
+        "speedLimit": 8
+      },
+      {
+        "id": 3,
+        "from": 12,
+        "to": 11,
+        "length": 23.561945,
+        "speedLimit": 8
+      },
+      {
+        "id": 4,
+        "from": 11,
+        "to": 10,
+        "length": 23.561945,
+        "speedLimit": 8
+      },
+      {
+        "id": 5,
+        "from": 100,
+        "to": 10,
+        "length": 135,
+        "speedLimit": 13.9
+      },
+      {
+        "id": 6,
+        "from": 10,
+        "to": 100,
+        "length": 135,
+        "speedLimit": 13.9
+      },
+      {
+        "id": 7,
+        "from": 101,
+        "to": 11,
+        "length": 135,
+        "speedLimit": 13.9
+      },
+      {
+        "id": 8,
+        "from": 11,
+        "to": 101,
+        "length": 135,
+        "speedLimit": 13.9
+      },
+      {
+        "id": 9,
+        "from": 102,
+        "to": 12,
+        "length": 135,
+        "speedLimit": 13.9
+      },
+      {
+        "id": 10,
+        "from": 12,
+        "to": 102,
+        "length": 135,
+        "speedLimit": 13.9
+      },
+      {
+        "id": 11,
+        "from": 103,
+        "to": 13,
+        "length": 135,
+        "speedLimit": 13.9
+      },
+      {
+        "id": 12,
+        "from": 13,
+        "to": 103,
+        "length": 135,
+        "speedLimit": 13.9
+      }
+    ]
+  },
+  "demand": {
+    "flows": [
+      {
+        "origin": 100,
+        "dest": 101,
+        "rate": {
+          "times": [
+            0
+          ],
+          "rates": [
+            2
+          ]
+        }
+      },
+      {
+        "origin": 100,
+        "dest": 102,
+        "rate": {
+          "times": [
+            0
+          ],
+          "rates": [
+            2
+          ]
+        }
+      },
+      {
+        "origin": 100,
+        "dest": 103,
+        "rate": {
+          "times": [
+            0
+          ],
+          "rates": [
+            2
+          ]
+        }
+      },
+      {
+        "origin": 101,
+        "dest": 100,
+        "rate": {
+          "times": [
+            0
+          ],
+          "rates": [
+            2
+          ]
+        }
+      },
+      {
+        "origin": 101,
+        "dest": 102,
+        "rate": {
+          "times": [
+            0
+          ],
+          "rates": [
+            2
+          ]
+        }
+      },
+      {
+        "origin": 101,
+        "dest": 103,
+        "rate": {
+          "times": [
+            0
+          ],
+          "rates": [
+            2
+          ]
+        }
+      },
+      {
+        "origin": 102,
+        "dest": 100,
+        "rate": {
+          "times": [
+            0
+          ],
+          "rates": [
+            2
+          ]
+        }
+      },
+      {
+        "origin": 102,
+        "dest": 101,
+        "rate": {
+          "times": [
+            0
+          ],
+          "rates": [
+            2
+          ]
+        }
+      },
+      {
+        "origin": 102,
+        "dest": 103,
+        "rate": {
+          "times": [
+            0
+          ],
+          "rates": [
+            2
+          ]
+        }
+      },
+      {
+        "origin": 103,
+        "dest": 100,
+        "rate": {
+          "times": [
+            0
+          ],
+          "rates": [
+            2
+          ]
+        }
+      },
+      {
+        "origin": 103,
+        "dest": 101,
+        "rate": {
+          "times": [
+            0
+          ],
+          "rates": [
+            2
+          ]
+        }
+      },
+      {
+        "origin": 103,
+        "dest": 102,
+        "rate": {
+          "times": [
+            0
+          ],
+          "rates": [
+            2
+          ]
+        }
+      }
+    ]
+  },
+  "duration": 600
+}

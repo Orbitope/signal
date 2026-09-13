@@ -1,0 +1,187 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Signal — Training Stack Results</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Rajdhani:wght@600;700&family=Inter:wght@400;500&family=JetBrains+Mono:wght@400;700&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --void:#111009; --surface:#1E1C16; --raised:#2C2A22; --border:#3D3A30;
+    --tbright:#EDE8DC; --tprimary:#C8C0AE; --tsecondary:#9A9484; --tmuted:#6A6358;
+    --amber:#C49A3C; --amberb:#E8C068; --steel:#6B7A8D; --steelb:#9AAABB;
+    --coral:#FF5E3A; --sage:#7D9A6A;
+  }
+  body{background:var(--void);color:var(--tprimary);font-family:Inter,system-ui,sans-serif;
+       margin:0;padding:40px 20px;line-height:1.55}
+  main{max-width:920px;margin:0 auto}
+  h1,h2{font-family:Rajdhani,Inter,sans-serif;color:var(--tbright);letter-spacing:.02em;
+        text-transform:uppercase}
+  h1{font-size:30px;margin:0 0 4px}
+  h2{font-size:20px;margin:44px 0 10px;border-bottom:1px solid var(--border);padding-bottom:6px}
+  .tag{font-family:'JetBrains Mono',monospace;font-size:12px;color:var(--tmuted)}
+  p{margin:10px 0}
+  em{color:var(--tsecondary)}
+  code{font-family:'JetBrains Mono',monospace;background:var(--raised);
+       padding:1px 5px;border-radius:3px;font-size:.9em;color:var(--amberb)}
+  .card{background:var(--surface);border:1px solid var(--border);border-radius:6px;
+        padding:8px 12px;margin:16px 0}
+  svg{display:block;margin:6px auto;max-width:100%;height:auto}
+  table{border-collapse:collapse;width:100%;margin:14px 0;font-size:14px}
+  th,td{text-align:right;padding:6px 10px;border-bottom:1px solid var(--border);
+        font-family:'JetBrains Mono',monospace}
+  th:first-child,td:first-child{text-align:left}
+  th{color:var(--tsecondary);font-weight:400;text-transform:uppercase;font-size:11px;letter-spacing:.05em}
+  .win{color:var(--amberb);font-weight:700}
+  .lead{font-size:16px;color:var(--tbright)}
+  .kicker{font-family:'JetBrains Mono',monospace;font-size:12px;color:var(--amberb);
+          text-transform:uppercase;letter-spacing:.08em;margin-top:26px}
+</style>
+</head>
+<body><main>
+
+<h1>Signal — Training Stack Results</h1>
+<div class="tag">orbitope · MARL ladder over Signal.EnvServer · sep 2026 · all numbers measured, greedy eval, same harness</div>
+
+<p class="lead">One compact multi-agent PPO trains every rung of the ladder over the
+existing traffic sim. Capacity is never the constraint — the largest brain here is
+62k parameters. What the runs actually establish: a shared local policy with a
+locally-computable pressure reward beats fixed-time control everywhere, generalizes
+across topologies, and — the result worth the trip — <em>recovers the coordination a
+centralized critic would buy, precisely when the network saturates.</em></p>
+
+<h2>The ladder — three rungs on grid2 (4 intersections)</h2>
+<p>Independent (one brain per intersection, neighbours blinded), shared (one brain,
+all intersections), and CTDE (shared actor + centralized critic). Light, symmetric
+demand.</p>
+<table>
+<tr><th>rung</th><th>ep_return</th><th>mean_queue</th><th>mean_wait_s</th></tr>
+<tr><td>rung 1 · independent</td><td>−50.5</td><td>2.70</td><td>13.9</td></tr>
+<tr><td>rung 3 · shared</td><td>−53.5</td><td>2.76</td><td>14.1</td></tr>
+<tr><td>rung 2 · CTDE</td><td>−75.2</td><td>3.80</td><td>17.2</td></tr>
+<tr><td>fixed-cycle</td><td>−122.7</td><td>5.45</td><td>26.3</td></tr>
+<tr><td>random</td><td>−94.2</td><td>4.47</td><td>22.3</td></tr>
+</table>
+<p>All three RL rungs beat fixed-time. Shared ≈ independent, and both beat the
+heavier centralized critic — because grid2 at light demand is <em>low-coupling</em>,
+so seeing your neighbours buys almost nothing. That is a clue, not a disappointment;
+it sets up the corridor.</p>
+
+<h2>A real network — the corridor (15 intersections)</h2>
+<p>Not a uniform grid: a fast two-way <span style="color:var(--amberb)">primary
+arterial</span> (E–W thoroughfare) crossing a secondary arterial, a
+<span style="color:var(--coral)">one-way eastbound side street</span> (the reverse
+links simply don't exist; the router honours it), and demand concentrated on the
+thoroughfares. Built by <code>CorridorBuilder.cs</code>, rendered from the true
+authored network:</p>
+<div class="card">
+<svg viewBox="0 0 960 686" xmlns="http://www.w3.org/2000/svg" font-family="JetBrains Mono,monospace">
+<rect width="960" height="686" fill="#111009"/>
+<defs><marker id="ar" markerWidth="8" markerHeight="8" refX="6" refY="4" orient="auto"><path d="M0,0 L8,4 L0,8 z" fill="#E8C068"/></marker></defs>
+<text x="70" y="34" fill="#EDE8DC" font-family="Rajdhani,sans-serif" font-weight="700" font-size="20" letter-spacing="1">corridor (5x3) — arterials + one-way side street</text>
+<line x1="70.0" y1="342.7" x2="890.0" y2="342.7" stroke="#E8C068" stroke-width="19.0" opacity="0.10" stroke-linecap="round"/>
+<line x1="480.0" y1="616.0" x2="480.0" y2="69.3" stroke="#E8C068" stroke-width="11.6" opacity="0.10" stroke-linecap="round"/>
+<line x1="70.0" y1="479.3" x2="890.0" y2="479.3" stroke="#E8C068" stroke-width="6.7" opacity="0.10" stroke-linecap="round"/>
+<line x1="206.7" y1="479.3" x2="327.3" y2="479.3" stroke="#C47A5A" stroke-width="3" marker-end="url(#ar)" opacity="0.95"/>
+<line x1="343.3" y1="479.3" x2="464.0" y2="479.3" stroke="#C47A5A" stroke-width="3" marker-end="url(#ar)" opacity="0.95"/>
+<line x1="480.0" y1="479.3" x2="600.7" y2="479.3" stroke="#C47A5A" stroke-width="3" marker-end="url(#ar)" opacity="0.95"/>
+<line x1="616.7" y1="479.3" x2="737.3" y2="479.3" stroke="#C47A5A" stroke-width="3" marker-end="url(#ar)" opacity="0.95"/>
+<line x1="70.0" y1="342.7" x2="890.0" y2="342.7" stroke="#E8C068" stroke-width="4.5" opacity="0.9"/>
+<line x1="480.0" y1="69.3" x2="480.0" y2="616.0" stroke="#E8C068" stroke-width="4.5" opacity="0.9"/>
+<line x1="206.7" y1="206.0" x2="753.3" y2="206.0" stroke="#6B7A8D" stroke-width="2.2" opacity="0.9"/>
+<line x1="206.7" y1="69.3" x2="206.7" y2="616.0" stroke="#3D3A30" stroke-width="1.4" opacity="0.7"/>
+<line x1="343.3" y1="69.3" x2="343.3" y2="616.0" stroke="#3D3A30" stroke-width="1.4" opacity="0.7"/>
+<line x1="616.7" y1="69.3" x2="616.7" y2="616.0" stroke="#3D3A30" stroke-width="1.4" opacity="0.7"/>
+<line x1="753.3" y1="69.3" x2="753.3" y2="616.0" stroke="#3D3A30" stroke-width="1.4" opacity="0.7"/>
+<line x1="206.7" y1="342.7" x2="206.7" y2="206.0" stroke="#6B7A8D" stroke-width="2.2" opacity="0.6"/>
+<line x1="343.3" y1="342.7" x2="343.3" y2="206.0" stroke="#6B7A8D" stroke-width="2.2" opacity="0.6"/>
+<line x1="616.7" y1="342.7" x2="616.7" y2="206.0" stroke="#6B7A8D" stroke-width="2.2" opacity="0.6"/>
+<line x1="753.3" y1="342.7" x2="753.3" y2="206.0" stroke="#6B7A8D" stroke-width="2.2" opacity="0.6"/>
+<g fill="#111009" stroke="#EDE8DC" stroke-width="2">
+<circle cx="206.7" cy="479.3" r="7"/><circle cx="343.3" cy="479.3" r="7"/><circle cx="480.0" cy="479.3" r="7"/><circle cx="616.7" cy="479.3" r="7"/><circle cx="753.3" cy="479.3" r="7"/>
+<circle cx="206.7" cy="342.7" r="7"/><circle cx="343.3" cy="342.7" r="7"/><circle cx="480.0" cy="342.7" r="7"/><circle cx="616.7" cy="342.7" r="7"/><circle cx="753.3" cy="342.7" r="7"/>
+<circle cx="206.7" cy="206.0" r="7"/><circle cx="343.3" cy="206.0" r="7"/><circle cx="480.0" cy="206.0" r="7"/><circle cx="616.7" cy="206.0" r="7"/><circle cx="753.3" cy="206.0" r="7"/>
+</g>
+<line x1="730" y1="52" x2="755" y2="52" stroke="#E8C068" stroke-width="4.5"/><text x="762" y="56" fill="#EDE8DC" font-family="JetBrains Mono,monospace" font-size="11">fast arterial</text>
+<line x1="730" y1="72" x2="755" y2="72" stroke="#6B7A8D" stroke-width="2.2"/><text x="762" y="76" fill="#EDE8DC" font-family="JetBrains Mono,monospace" font-size="11">side street</text>
+<line x1="730" y1="92" x2="755" y2="92" stroke="#C47A5A" stroke-width="3" marker-end="url(#ar)"/><text x="762" y="96" fill="#EDE8DC" font-family="JetBrains Mono,monospace" font-size="11">one-way eastbound</text>
+</svg>
+</div>
+<p>The shared policy masters it — beating fixed-time on the pressure objective and on
+average wait under both stationary demand (−148 vs −184) and <em>time-varying
+rush-hour demand</em> (−117 vs −144), tracking a load that ramps and drains.</p>
+
+<h2 style="color:var(--amberb)">The result — coordination pays under saturation</h2>
+<p>At light demand, seeing your neighbours is worth almost nothing. Retrain both the
+shared (neighbour-aware) and independent (blind) policies <em>at</em> a saturating 1.8×
+demand — where queues actually spill back between intersections — and the gap opens:</p>
+<div class="card">
+<svg viewBox="0 0 860 460" xmlns="http://www.w3.org/2000/svg" font-family="JetBrains Mono,monospace">
+<rect width="860" height="460" fill="#111009"/>
+<text x="66" y="32" fill="#EDE8DC" font-family="Rajdhani,sans-serif" font-weight="700" font-size="19" letter-spacing="1">Coordination pays under saturation — corridor mean wait</text>
+<line x1="66" y1="313.5" x2="840" y2="313.5" stroke="#3D3A30" stroke-width="0.6"/><text x="58" y="317.5" fill="#6A6358" font-family="JetBrains Mono,monospace" font-size="11" text-anchor="end">6</text>
+<line x1="66" y1="229.0" x2="840" y2="229.0" stroke="#3D3A30" stroke-width="0.6"/><text x="58" y="233.0" fill="#6A6358" font-family="JetBrains Mono,monospace" font-size="11" text-anchor="end">14</text>
+<line x1="66" y1="144.5" x2="840" y2="144.5" stroke="#3D3A30" stroke-width="0.6"/><text x="58" y="148.5" fill="#6A6358" font-family="JetBrains Mono,monospace" font-size="11" text-anchor="end">21</text>
+<line x1="66" y1="60.0" x2="840" y2="60.0" stroke="#3D3A30" stroke-width="0.6"/><text x="58" y="64.0" fill="#6A6358" font-family="JetBrains Mono,monospace" font-size="11" text-anchor="end">29</text>
+<line x1="66" y1="383.0" x2="840" y2="383.0" stroke="#6A6358" stroke-width="1.2"/>
+<text x="18" y="230" fill="#6A6358" font-family="JetBrains Mono,monospace" font-size="12" text-anchor="middle" transform="rotate(-90 18 230)">mean wait (s), lower better</text>
+<rect x="120.2" y="225.1" width="81.7" height="158.0" fill="#E8C068" opacity="0.9"/><text x="161.0" y="221.1" fill="#EDE8DC" font-family="JetBrains Mono,monospace" font-size="10" text-anchor="middle">14</text>
+<rect x="213.1" y="217.2" width="81.7" height="165.8" fill="#6B7A8D" opacity="0.9"/><text x="253.9" y="213.2" fill="#EDE8DC" font-family="JetBrains Mono,monospace" font-size="10" text-anchor="middle">15</text>
+<rect x="305.9" y="163.5" width="81.7" height="219.6" fill="#7D9A6A" opacity="0.9"/><text x="346.8" y="159.5" fill="#EDE8DC" font-family="JetBrains Mono,monospace" font-size="10" text-anchor="middle">20</text>
+<text x="259.5" y="410" fill="#6A6358" font-family="JetBrains Mono,monospace" font-size="12" text-anchor="middle">light demand (1.0x)</text>
+<rect x="507.2" y="178.0" width="81.7" height="205.0" fill="#E8C068" opacity="0.9"/><text x="548.0" y="174.0" fill="#EDE8DC" font-family="JetBrains Mono,monospace" font-size="10" text-anchor="middle">18</text>
+<rect x="600.1" y="154.5" width="81.7" height="228.5" fill="#6B7A8D" opacity="0.9"/><text x="640.9" y="150.5" fill="#EDE8DC" font-family="JetBrains Mono,monospace" font-size="10" text-anchor="middle">20</text>
+<rect x="692.9" y="83.9" width="81.7" height="299.1" fill="#7D9A6A" opacity="0.9"/><text x="733.8" y="79.9" fill="#EDE8DC" font-family="JetBrains Mono,monospace" font-size="10" text-anchor="middle">27</text>
+<text x="646.5" y="410" fill="#6A6358" font-family="JetBrains Mono,monospace" font-size="12" text-anchor="middle">saturated (1.8x)</text>
+<rect x="66" y="436" width="12" height="12" fill="#E8C068"/><text x="84" y="446" fill="#EDE8DC" font-family="JetBrains Mono,monospace" font-size="12">shared</text>
+<rect x="241" y="436" width="12" height="12" fill="#6B7A8D"/><text x="259" y="446" fill="#EDE8DC" font-family="JetBrains Mono,monospace" font-size="12">independent</text>
+<rect x="416" y="436" width="12" height="12" fill="#7D9A6A"/><text x="434" y="446" fill="#EDE8DC" font-family="JetBrains Mono,monospace" font-size="12">fixed-time</text>
+</svg>
+</div>
+<p>Across <strong>3 seeds each</strong>, evaluated at 1.8× (the <code>starved%</code>
+column is the fraction of approach waits pinned at the 120&nbsp;s clamp — a
+fairness/starvation proxy that, unlike max-wait, doesn't saturate to a constant):</p>
+<table>
+<tr><th>policy @1.8× (3 seeds)</th><th>ep_return</th><th>mean_wait_s</th><th>starved%</th></tr>
+<tr><td class="win">shared (sees neighbours)</td><td class="win">−393.0 ± 1.9</td><td class="win">18.3 ± 0.7</td><td class="win">31.0 ± 1.3</td></tr>
+<tr><td>independent (blind)</td><td>−417.4 ± 4.4</td><td>20.4 ± 1.1</td><td>34.8 ± 1.9</td></tr>
+<tr><td>fixed-cycle</td><td>−421.8</td><td>26.7</td><td>41.0</td></tr>
+</table>
+<p>The 24-point return gap is <strong>~5× the seed spread</strong> — a robust effect.
+And the blind independent policy nearly collapses to fixed-time's return: with no
+neighbour signal it cannot beat local greedy once the network is coupled.
+<em>Coordination's value is demand-dependent: negligible at light load, decisive under
+saturation</em> — the plan's thesis, measured.</p>
+
+<h2>Scale — one brain, 1 to 25 intersections</h2>
+<p>The shared policy is agent-count-agnostic (a fixed 105-float view per intersection;
+N never enters the network), so the identical 62k-param brain runs every size. Trained
+fresh on grid5 (25 intersections) it beats fixed-time comfortably:</p>
+<table>
+<tr><th>policy on grid5 (25)</th><th>ep_return</th><th>mean_wait_s</th><th>starved%</th></tr>
+<tr><td class="win">shared</td><td class="win">−207.2</td><td class="win">25.4</td><td class="win">27.7</td></tr>
+<tr><td>fixed-cycle</td><td>−257.7</td><td>33.3</td><td>44.3</td></tr>
+<tr><td>random</td><td>−232.1</td><td>32.0</td><td>40.5</td></tr>
+</table>
+<p>And a brain trained on grid2 (4) runs grid3 (9) <em>zero-shot</em>, beating that
+grid's own fixed baseline (−165 vs −214). The only cost of scale is env throughput —
+the single-threaded sim: ~8,800 decision-steps/s at 1 intersection, ~1,200 at 15,
+~860 at 25. The learner and model are untouched.</p>
+
+<h2>Honest caveats &amp; the next rung</h2>
+<p>Transfer holds <em>within</em> a lane structure; crossing structures (single-lane
+grid ↔ bays with protected-left phases) needs the curriculum ladder the plan
+prescribes — a brain that never saw a bay never learned its protected-left phases.
+Even under saturation the 1-hop coordination win is real but not a landslide (~10%),
+which is the honest motivation for richer attention/GNN policies. Reward-vs-metric
+tension persists on dominant-flow corridors (a dumb "hold the arterial green" posts
+low wait but worst total pressure). Next: retrain the coordination comparison on the
+25-grid under load to see whether the neighbour advantage widens with network size,
+and export trajectories to <em>watch</em> the green wave the shared policy builds.</p>
+
+<p class="tag" style="margin-top:30px">reproduce: <code>bash training/run_all.sh</code> ·
+full tables in <code>training/RESULTS.md</code> · methods in <code>training/README.md</code></p>
+
+</main></body>
+</html>

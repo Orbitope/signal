@@ -1,0 +1,313 @@
+{
+  "name": "fourway-signal",
+  "network": {
+    "nodes": [
+      {
+        "id": 0,
+        "x": 0,
+        "y": 0,
+        "isBoundary": false,
+        "control": "Signalized",
+        "phases": [
+          {
+            "movements": [
+              0,
+              1,
+              2,
+              6,
+              7,
+              8
+            ],
+            "permissive": [
+              0,
+              8
+            ]
+          },
+          {
+            "movements": [
+              3,
+              4,
+              5,
+              9,
+              10,
+              11
+            ],
+            "permissive": [
+              4,
+              9
+            ]
+          }
+        ],
+        "majorInLinks": null,
+        "minGreen": 5,
+        "yellow": 3,
+        "allRed": 1,
+        "stopServiceTime": 2,
+        "gapThreshold": 4
+      },
+      {
+        "id": 100,
+        "x": 0,
+        "y": 150,
+        "isBoundary": true,
+        "control": "Uncontrolled",
+        "phases": null,
+        "majorInLinks": null,
+        "minGreen": 5,
+        "yellow": 3,
+        "allRed": 1,
+        "stopServiceTime": 2,
+        "gapThreshold": 4
+      },
+      {
+        "id": 101,
+        "x": 150,
+        "y": 0,
+        "isBoundary": true,
+        "control": "Uncontrolled",
+        "phases": null,
+        "majorInLinks": null,
+        "minGreen": 5,
+        "yellow": 3,
+        "allRed": 1,
+        "stopServiceTime": 2,
+        "gapThreshold": 4
+      },
+      {
+        "id": 102,
+        "x": 0,
+        "y": -150,
+        "isBoundary": true,
+        "control": "Uncontrolled",
+        "phases": null,
+        "majorInLinks": null,
+        "minGreen": 5,
+        "yellow": 3,
+        "allRed": 1,
+        "stopServiceTime": 2,
+        "gapThreshold": 4
+      },
+      {
+        "id": 103,
+        "x": -150,
+        "y": 0,
+        "isBoundary": true,
+        "control": "Uncontrolled",
+        "phases": null,
+        "majorInLinks": null,
+        "minGreen": 5,
+        "yellow": 3,
+        "allRed": 1,
+        "stopServiceTime": 2,
+        "gapThreshold": 4
+      }
+    ],
+    "links": [
+      {
+        "id": 1,
+        "from": 100,
+        "to": 0,
+        "length": 150,
+        "speedLimit": 13.9
+      },
+      {
+        "id": 11,
+        "from": 0,
+        "to": 100,
+        "length": 150,
+        "speedLimit": 13.9
+      },
+      {
+        "id": 2,
+        "from": 101,
+        "to": 0,
+        "length": 150,
+        "speedLimit": 13.9
+      },
+      {
+        "id": 12,
+        "from": 0,
+        "to": 101,
+        "length": 150,
+        "speedLimit": 13.9
+      },
+      {
+        "id": 3,
+        "from": 102,
+        "to": 0,
+        "length": 150,
+        "speedLimit": 13.9
+      },
+      {
+        "id": 13,
+        "from": 0,
+        "to": 102,
+        "length": 150,
+        "speedLimit": 13.9
+      },
+      {
+        "id": 4,
+        "from": 103,
+        "to": 0,
+        "length": 150,
+        "speedLimit": 13.9
+      },
+      {
+        "id": 14,
+        "from": 0,
+        "to": 103,
+        "length": 150,
+        "speedLimit": 13.9
+      }
+    ]
+  },
+  "demand": {
+    "flows": [
+      {
+        "origin": 100,
+        "dest": 101,
+        "rate": {
+          "times": [
+            0
+          ],
+          "rates": [
+            2
+          ]
+        }
+      },
+      {
+        "origin": 100,
+        "dest": 102,
+        "rate": {
+          "times": [
+            0
+          ],
+          "rates": [
+            2
+          ]
+        }
+      },
+      {
+        "origin": 100,
+        "dest": 103,
+        "rate": {
+          "times": [
+            0
+          ],
+          "rates": [
+            2
+          ]
+        }
+      },
+      {
+        "origin": 101,
+        "dest": 100,
+        "rate": {
+          "times": [
+            0
+          ],
+          "rates": [
+            2
+          ]
+        }
+      },
+      {
+        "origin": 101,
+        "dest": 102,
+        "rate": {
+          "times": [
+            0
+          ],
+          "rates": [
+            2
+          ]
+        }
+      },
+      {
+        "origin": 101,
+        "dest": 103,
+        "rate": {
+          "times": [
+            0
+          ],
+          "rates": [
+            2
+          ]
+        }
+      },
+      {
+        "origin": 102,
+        "dest": 100,
+        "rate": {
+          "times": [
+            0
+          ],
+          "rates": [
+            2
+          ]
+        }
+      },
+      {
+        "origin": 102,
+        "dest": 101,
+        "rate": {
+          "times": [
+            0
+          ],
+          "rates": [
+            2
+          ]
+        }
+      },
+      {
+        "origin": 102,
+        "dest": 103,
+        "rate": {
+          "times": [
+            0
+          ],
+          "rates": [
+            2
+          ]
+        }
+      },
+      {
+        "origin": 103,
+        "dest": 100,
+        "rate": {
+          "times": [
+            0
+          ],
+          "rates": [
+            2
+          ]
+        }
+      },
+      {
+        "origin": 103,
+        "dest": 101,
+        "rate": {
+          "times": [
+            0
+          ],
+          "rates": [
+            2
+          ]
+        }
+      },
+      {
+        "origin": 103,
+        "dest": 102,
+        "rate": {
+          "times": [
+            0
+          ],
+          "rates": [
+            2
+          ]
+        }
+      }
+    ]
+  },
+  "duration": 600
+}

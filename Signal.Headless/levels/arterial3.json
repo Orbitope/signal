@@ -1,0 +1,491 @@
+{
+  "name": "arterial3",
+  "network": {
+    "nodes": [
+      {
+        "id": 0,
+        "x": 0,
+        "y": 0,
+        "isBoundary": false,
+        "control": "Signalized",
+        "phases": [
+          {
+            "movements": [
+              0,
+              1,
+              2,
+              3,
+              4,
+              5
+            ],
+            "permissive": [
+              1,
+              5
+            ]
+          },
+          {
+            "movements": [
+              6,
+              7,
+              8,
+              9,
+              10,
+              11
+            ],
+            "permissive": [
+              7,
+              9
+            ]
+          }
+        ],
+        "majorInLinks": null,
+        "minGreen": 5,
+        "yellow": 3,
+        "allRed": 1,
+        "stopServiceTime": 2,
+        "gapThreshold": 4
+      },
+      {
+        "id": 1,
+        "x": 200,
+        "y": 0,
+        "isBoundary": false,
+        "control": "Signalized",
+        "phases": [
+          {
+            "movements": [
+              0,
+              1,
+              2,
+              3,
+              4,
+              5
+            ],
+            "permissive": [
+              1,
+              5
+            ]
+          },
+          {
+            "movements": [
+              6,
+              7,
+              8,
+              9,
+              10,
+              11
+            ],
+            "permissive": [
+              7,
+              9
+            ]
+          }
+        ],
+        "majorInLinks": null,
+        "minGreen": 5,
+        "yellow": 3,
+        "allRed": 1,
+        "stopServiceTime": 2,
+        "gapThreshold": 4
+      },
+      {
+        "id": 2,
+        "x": 400,
+        "y": 0,
+        "isBoundary": false,
+        "control": "Signalized",
+        "phases": [
+          {
+            "movements": [
+              0,
+              1,
+              2,
+              3,
+              4,
+              5
+            ],
+            "permissive": [
+              1,
+              5
+            ]
+          },
+          {
+            "movements": [
+              6,
+              7,
+              8,
+              9,
+              10,
+              11
+            ],
+            "permissive": [
+              7,
+              9
+            ]
+          }
+        ],
+        "majorInLinks": null,
+        "minGreen": 5,
+        "yellow": 3,
+        "allRed": 1,
+        "stopServiceTime": 2,
+        "gapThreshold": 4
+      },
+      {
+        "id": 200,
+        "x": -200,
+        "y": 0,
+        "isBoundary": true,
+        "control": "Uncontrolled",
+        "phases": null,
+        "majorInLinks": null,
+        "minGreen": 5,
+        "yellow": 3,
+        "allRed": 1,
+        "stopServiceTime": 2,
+        "gapThreshold": 4
+      },
+      {
+        "id": 201,
+        "x": 600,
+        "y": 0,
+        "isBoundary": true,
+        "control": "Uncontrolled",
+        "phases": null,
+        "majorInLinks": null,
+        "minGreen": 5,
+        "yellow": 3,
+        "allRed": 1,
+        "stopServiceTime": 2,
+        "gapThreshold": 4
+      },
+      {
+        "id": 300,
+        "x": 0,
+        "y": 120,
+        "isBoundary": true,
+        "control": "Uncontrolled",
+        "phases": null,
+        "majorInLinks": null,
+        "minGreen": 5,
+        "yellow": 3,
+        "allRed": 1,
+        "stopServiceTime": 2,
+        "gapThreshold": 4
+      },
+      {
+        "id": 400,
+        "x": 0,
+        "y": -120,
+        "isBoundary": true,
+        "control": "Uncontrolled",
+        "phases": null,
+        "majorInLinks": null,
+        "minGreen": 5,
+        "yellow": 3,
+        "allRed": 1,
+        "stopServiceTime": 2,
+        "gapThreshold": 4
+      },
+      {
+        "id": 301,
+        "x": 200,
+        "y": 120,
+        "isBoundary": true,
+        "control": "Uncontrolled",
+        "phases": null,
+        "majorInLinks": null,
+        "minGreen": 5,
+        "yellow": 3,
+        "allRed": 1,
+        "stopServiceTime": 2,
+        "gapThreshold": 4
+      },
+      {
+        "id": 401,
+        "x": 200,
+        "y": -120,
+        "isBoundary": true,
+        "control": "Uncontrolled",
+        "phases": null,
+        "majorInLinks": null,
+        "minGreen": 5,
+        "yellow": 3,
+        "allRed": 1,
+        "stopServiceTime": 2,
+        "gapThreshold": 4
+      },
+      {
+        "id": 302,
+        "x": 400,
+        "y": 120,
+        "isBoundary": true,
+        "control": "Uncontrolled",
+        "phases": null,
+        "majorInLinks": null,
+        "minGreen": 5,
+        "yellow": 3,
+        "allRed": 1,
+        "stopServiceTime": 2,
+        "gapThreshold": 4
+      },
+      {
+        "id": 402,
+        "x": 400,
+        "y": -120,
+        "isBoundary": true,
+        "control": "Uncontrolled",
+        "phases": null,
+        "majorInLinks": null,
+        "minGreen": 5,
+        "yellow": 3,
+        "allRed": 1,
+        "stopServiceTime": 2,
+        "gapThreshold": 4
+      }
+    ],
+    "links": [
+      {
+        "id": 1,
+        "from": 200,
+        "to": 0,
+        "length": 200,
+        "speedLimit": 13.9
+      },
+      {
+        "id": 2,
+        "from": 0,
+        "to": 200,
+        "length": 200,
+        "speedLimit": 13.9
+      },
+      {
+        "id": 3,
+        "from": 0,
+        "to": 1,
+        "length": 200,
+        "speedLimit": 13.9
+      },
+      {
+        "id": 4,
+        "from": 1,
+        "to": 0,
+        "length": 200,
+        "speedLimit": 13.9
+      },
+      {
+        "id": 5,
+        "from": 1,
+        "to": 2,
+        "length": 200,
+        "speedLimit": 13.9
+      },
+      {
+        "id": 6,
+        "from": 2,
+        "to": 1,
+        "length": 200,
+        "speedLimit": 13.9
+      },
+      {
+        "id": 7,
+        "from": 2,
+        "to": 201,
+        "length": 200,
+        "speedLimit": 13.9
+      },
+      {
+        "id": 8,
+        "from": 201,
+        "to": 2,
+        "length": 200,
+        "speedLimit": 13.9
+      },
+      {
+        "id": 9,
+        "from": 300,
+        "to": 0,
+        "length": 120,
+        "speedLimit": 13.9
+      },
+      {
+        "id": 10,
+        "from": 0,
+        "to": 300,
+        "length": 120,
+        "speedLimit": 13.9
+      },
+      {
+        "id": 11,
+        "from": 400,
+        "to": 0,
+        "length": 120,
+        "speedLimit": 13.9
+      },
+      {
+        "id": 12,
+        "from": 0,
+        "to": 400,
+        "length": 120,
+        "speedLimit": 13.9
+      },
+      {
+        "id": 13,
+        "from": 301,
+        "to": 1,
+        "length": 120,
+        "speedLimit": 13.9
+      },
+      {
+        "id": 14,
+        "from": 1,
+        "to": 301,
+        "length": 120,
+        "speedLimit": 13.9
+      },
+      {
+        "id": 15,
+        "from": 401,
+        "to": 1,
+        "length": 120,
+        "speedLimit": 13.9
+      },
+      {
+        "id": 16,
+        "from": 1,
+        "to": 401,
+        "length": 120,
+        "speedLimit": 13.9
+      },
+      {
+        "id": 17,
+        "from": 302,
+        "to": 2,
+        "length": 120,
+        "speedLimit": 13.9
+      },
+      {
+        "id": 18,
+        "from": 2,
+        "to": 302,
+        "length": 120,
+        "speedLimit": 13.9
+      },
+      {
+        "id": 19,
+        "from": 402,
+        "to": 2,
+        "length": 120,
+        "speedLimit": 13.9
+      },
+      {
+        "id": 20,
+        "from": 2,
+        "to": 402,
+        "length": 120,
+        "speedLimit": 13.9
+      }
+    ]
+  },
+  "demand": {
+    "flows": [
+      {
+        "origin": 200,
+        "dest": 201,
+        "rate": {
+          "times": [
+            0
+          ],
+          "rates": [
+            18
+          ]
+        }
+      },
+      {
+        "origin": 201,
+        "dest": 200,
+        "rate": {
+          "times": [
+            0
+          ],
+          "rates": [
+            12
+          ]
+        }
+      },
+      {
+        "origin": 300,
+        "dest": 401,
+        "rate": {
+          "times": [
+            0
+          ],
+          "rates": [
+            5
+          ]
+        }
+      },
+      {
+        "origin": 400,
+        "dest": 302,
+        "rate": {
+          "times": [
+            0
+          ],
+          "rates": [
+            4
+          ]
+        }
+      },
+      {
+        "origin": 301,
+        "dest": 402,
+        "rate": {
+          "times": [
+            0
+          ],
+          "rates": [
+            5
+          ]
+        }
+      },
+      {
+        "origin": 401,
+        "dest": 300,
+        "rate": {
+          "times": [
+            0
+          ],
+          "rates": [
+            4
+          ]
+        }
+      },
+      {
+        "origin": 302,
+        "dest": 400,
+        "rate": {
+          "times": [
+            0
+          ],
+          "rates": [
+            5
+          ]
+        }
+      },
+      {
+        "origin": 402,
+        "dest": 301,
+        "rate": {
+          "times": [
+            0
+          ],
+          "rates": [
+            4
+          ]
+        }
+      }
+    ]
+  },
+  "duration": 600
+}
