@@ -512,7 +512,7 @@ namespace Signal.Core
             // 6. School run: a tide that reverses. Everyone heads north to the school in
             //    the morning and back out in the afternoon.
             {
-                var doc = Row(3, spacing: 200f, preset: "balanced", total: 18f);
+                var doc = Row(3, spacing: 200f, preset: "balanced", total: 17.6f);
                 doc.duration = 600f; doc.demand.tide = 0;
                 doc.demand.Weigh(2, 1, 0, 6f).Weigh(1, 1, 0, 0.2f).Weigh(3, 1, 0, 0.2f);   // the school is the middle junction's north arm
                 foreach (var j in doc.junctions) { j.control = ControlType.TwoWayStop; j.majorAxis = 0; }
@@ -524,7 +524,7 @@ namespace Signal.Core
                     level = doc.BuildRaw(),
                     toolbox = { Tools.AllWayStop(), Tools.TwoWayStop(), Tools.Signal(), Tools.Roundabout(), Tools.TimedPlan() },
                     budget = 80, par = 40,
-                    objectives = { Avg(16f), Max(75f), new ObjectiveDef { kind = ObjectiveKind.GateQueue, value = 8 } },
+                    objectives = { Avg(16f), Max(105f), new ObjectiveDef { kind = ObjectiveKind.GateQueue, value = 8 } },
                     answer = { new EditOp { kind = EditKind.SetControl, node = EditorDoc.JunctionId(2, 1), control = ControlType.Signalized } },
                 });
             }

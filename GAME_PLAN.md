@@ -317,9 +317,13 @@ right out (ban one specific side-street left across the arterial, $5, and the
 block carries the detour; most other bans fail the fairness goal). Search
 now handles more than five junctions by coordinate descent.
 
+*Also built:* **the district** (8x5 grid, 40 junctions, four ringed corners
+editable via `PuzzleDef.editable`; 625 assignments score in 82 s) and the
+**school run** (tidal demand: `DemandSpec.tide` gives flows toward one side
+of the map a morning peak and flows away from it an afternoon peak; the cheap
+priority fix passes one tide and fails the other).
+
 *Brainstorm, not yet built (each maps to sim primitives that exist):*
-- **School run / shift change**: a tidal rush that reverses halfway (needs
-  per-direction rate curves; `Rush()` is symmetric today).
 - **The bridge**: a single two-lane link every route must use (bottleneck, a
   spillback goal, timed plans that meter the approaches).
 - **Bus lane / priority street**: an arm with a fixed flow that must keep a
