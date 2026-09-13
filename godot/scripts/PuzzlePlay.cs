@@ -113,7 +113,7 @@ namespace SignalGodot
             else if (spec == "retime")
             {
                 var tool = _p.toolbox.Find(t => t.kind == EditKind.Retime);
-                if (tool != null) { OpenNode(NetworkBuilder.Center); }
+                if (tool != null) foreach (var n in App.Runner.Sim.Network.Nodes) if (NetworkView.IsEditable(n)) { OpenNode(n.Id); break; }
             }
         }
 

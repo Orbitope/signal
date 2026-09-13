@@ -259,6 +259,23 @@ Export as puzzle (goals, toolbox ticks, budget, par) to `user://puzzles`,
 which the puzzle list shows under "Your puzzles". Not yet: lanes 1–2 per
 street, per-flow demand painting, undo/redo, scenario templates, diff view.
 
+*World 2 (2026-09-13):* six "Two lights" puzzles authored as EditorDocs
+(pair, short block at 90 m, 2x2 block, row of three, rush pair, roundabout
+pair), each calibrated with the table under the network AI. The couplet
+archetype was dropped for now: with uncoordinated lights the one-way pair
+did nothing measurable, and two-way stops won outright, so that block became
+"Overbuilt" (four signals on a quiet block lose to stops with the right
+priority). The green wave needs a coordinated controller and belongs to World 3
+once one exists.
+
+*AI status after World 2:* the grid brain starved side streets on two-junction
+levels, and a composite "all-training" brain (World 1 junctions + editor
+shapes + grid3, 30 agents) was still improving when its 600k steps ended and
+lost to aging MaxPressure on every World 2 shape (block: 54 s vs 17 s). So the
+shipped game runs the World 1 brain on a lone junction and aging MaxPressure
+on anything larger. A 2.4M-step run of the composite is in flight
+(`training/train_all_long.sh`); swap it in only if the table says it wins.
+
 **P4 — Progression and polish** (2–3 weeks)
 Worlds and star gates, a tutorial that is just World 1 with more text, hints,
 a replay of the run, sound and juice, settings, and the accessibility pass (the

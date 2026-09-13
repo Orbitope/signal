@@ -15,8 +15,9 @@ godot --headless --path . --import
 ## What's in it
 
 - **Menu** (`Menu.cs`) — home and the puzzle list with stars.
-- **Puzzles** (`PuzzlePlay.cs`, GAME_PLAN P1) — World 1, eight one-junction
-  puzzles from `Signal.Core.Worlds`. Left panel: the brief, goals, money, your
+- **Puzzles** (`PuzzlePlay.cs`, GAME_PLAN P1) — World 1 (eight one-junction
+  puzzles) and World 2 (six two-light puzzles) from `Signal.Core.Worlds`, plus
+  anything exported from the editor. Left panel: the brief, goals, money, your
   changes, Run. Click the junction or an approach on the map for the tools
   this puzzle allows, each with a price. Run scores every seed instantly and
   then replays seed 0 on screen with the goals updating live. Stars save to
@@ -43,10 +44,11 @@ gets 2560×1600) and the canvas stretches to it, so nothing renders half size.
 ## The AI
 
 `policies/*.bin` are exported actors (`training/export_policy.py`). At startup
-`Main.LoadGameAi` picks `shared-w1-v4-s0` for a lone junction and
-`shared-grid3-flow-v4-s0` for anything with more than one signal; if a file is
-missing the light-runner falls back to `AgingMaxPressurePolicy`. `--ai=mp`
-forces the fallback. The sandbox HUD names the AI in play. Each `.parity.json`
+`Main.LoadGameAi` picks `shared-w1-v4-s0` for a lone junction; anything with
+more than one signal currently runs `AgingMaxPressurePolicy` (no network brain
+has beaten it yet on the World 2 shapes; `NetworkPolicyPath` is empty until one
+does). If a file is missing the light-runner falls back to the same stand-in.
+`--ai=mp` forces the fallback. The sandbox HUD names the AI in play. Each `.parity.json`
 next to a `.bin` is the fixture `Signal.Tests` uses to prove the C# forward
 pass matches PyTorch.
 
@@ -69,10 +71,10 @@ Smoke gate (CI), headless:
 godot --headless --path . res://scenes/smoke.tscn
 ```
 
-39 checks: Core sims under Godot's .NET host, determinism, ghost lockstep,
+45 checks: Core sims under Godot's .NET host, determinism, ghost lockstep,
 fixed-tick accounting, registry levels run, tap override scoping and expiry,
 round finish, edit ops build legal levels (roundabout macro, bays, refusal of
-an edit that strands traffic), every World 1 puzzle fails as given and solves
+an edit that strands traffic), every authored puzzle in every world fails as given and solves
 with its authored answer, puzzle load honours a timed plan, the trained
 policies load from res:// and drive a grid, an editor document builds, runs
 and round-trips through user:// with an exported puzzle. Exits nonzero on

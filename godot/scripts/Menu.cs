@@ -57,12 +57,12 @@ namespace SignalGodot
             var col = Ui.Column(10);
             panel.AddChild(col);
 
-            var world = Worlds.All[0];
-            col.AddChild(Ui.Label(world.title.ToUpperInvariant(), Ui.Title + 6, Orbitope.TextBright, Orbitope.Rajdhani));
-            col.AddChild(Ui.Label(world.blurb, Ui.Body, Orbitope.TextSecondary, null, wrap: true, width: 640));
-            col.AddChild(Ui.Separator());
+            col.AddChild(Ui.Label("PUZZLES", Ui.Title + 6, Orbitope.TextBright, Orbitope.Rajdhani));
+            var scroll = new ScrollContainer { HorizontalScrollMode = ScrollContainer.ScrollMode.Disabled, CustomMinimumSize = new Vector2(760, 560) };
+            col.AddChild(scroll);
             _puzzleRows = Ui.Column(6);
-            col.AddChild(_puzzleRows);
+            _puzzleRows.SizeFlagsHorizontal = Control.SizeFlags.ExpandFill;
+            scroll.AddChild(_puzzleRows);
             col.AddChild(Ui.Separator());
             var back = Ui.Button("Back", () => App.ShowMenu());
             col.AddChild(back);
@@ -72,8 +72,15 @@ namespace SignalGodot
         private void RefreshPuzzleRows()
         {
             foreach (var c in _puzzleRows.GetChildren()) c.QueueFree();
-            var world = Worlds.All[0];
-            AddRows(world.puzzles, world.title);
+            bool first = true;
+            foreach (var world in Worlds.All)
+            {
+                if (!first) _puzzleRows.AddChild(Ui.Separator());
+                first = false;
+                _puzzleRows.AddChild(Ui.Label(world.title.ToUpperInvariant(), Ui.Heading, Orbitope.AmberBright, Orbitope.Rajdhani));
+                _puzzleRows.AddChild(Ui.Label(world.blurb, Ui.Small, Orbitope.TextSecondary, null, wrap: true, width: 700));
+                AddRows(world.puzzles, world.title);
+            }
             var mine = Store.LoadPuzzles();
             if (mine.Count > 0)
             {

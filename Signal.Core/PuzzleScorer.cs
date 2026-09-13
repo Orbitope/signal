@@ -105,6 +105,26 @@ namespace Signal.Core
             if (initial.Count > 0) list.Add(("initial ops removed", new List<EditOp>()));
             if (puzzle.answer != null) list.Add(("AUTHORED ANSWER", new List<EditOp>(puzzle.answer)));
 
+            // Multi-junction levels: also try the same control on every junction at once.
+            var junctions = lv.network.nodes.FindAll(n => !n.isBoundary && lv.network.links.FindAll(l => l.to == n.id).Count >= 3);
+            if (junctions.Count > 1)
+                foreach (var tool in puzzle.toolbox)
+                {
+                    if (tool.kind == EditKind.SetControl && (tool.control == ControlType.TwoWayStop || tool.control == ControlType.YieldEntry))
+                        for (int axis = 0; axis < 2; axis++)
+                        {
+                            var sol = Solution.From(initial);
+                            foreach (var nd in junctions) sol.Add(new EditOp { kind = tool.kind, node = nd.id, control = tool.control, majorAxis = axis });
+                            list.Add(($"{tool.label} everywhere ({(axis == 0 ? "E-W" : "N-S")} priority)", sol.Ops));
+                        }
+                    else if (tool.kind == EditKind.SetControl || tool.kind == EditKind.Roundabout)
+                    {
+                        var sol = Solution.From(initial);
+                        foreach (var nd in junctions) sol.Add(new EditOp { kind = tool.kind, node = nd.id, control = tool.control });
+                        list.Add(($"{tool.label} everywhere", sol.Ops));
+                    }
+                }
+
             foreach (var tool in puzzle.toolbox)
             {
                 switch (tool.kind)
@@ -115,6 +135,7 @@ namespace Signal.Core
                         foreach (var nd in lv.network.nodes)
                         {
                             if (nd.isBoundary) continue;
+                            if (lv.network.links.FindAll(l => l.to == nd.id).Count < 3) continue;   // forks, ring nodes
                             if (tool.kind == EditKind.SetControl && (tool.control == ControlType.TwoWayStop || tool.control == ControlType.YieldEntry))
                             {
                                 for (int axis = 0; axis < 2; axis++)
@@ -135,6 +156,20 @@ namespace Signal.Core
                     case EditKind.AddBay:
                     case EditKind.OneWay:
                     case EditKind.TurnBan:
+                        if (tool.kind == EditKind.OneWay || tool.kind == EditKind.TurnBan)
+                        {
+                            // Streets between junctions, as pairs (a one-way pair, both lefts banned).
+                            var inner = lv.network.links.FindAll(l => junctions.Exists(n => n.id == l.from) && junctions.Exists(n => n.id == l.to));
+                            for (int a = 0; a < inner.Count && inner.Count <= 12; a++)
+                            for (int b = a + 1; b < inner.Count; b++)
+                            {
+                                var ops = new List<EditOp>(initial);
+                                var o1 = new EditOp { kind = tool.kind, link = inner[a].id }; var o2 = new EditOp { kind = tool.kind, link = inner[b].id };
+                                if (tool.kind == EditKind.TurnBan) { o1.turns = TurnMask.Through | TurnMask.Right; o2.turns = o1.turns; }
+                                ops.Add(o1); ops.Add(o2);
+                                list.Add(($"{tool.label} links {inner[a].id}+{inner[b].id}", ops));
+                            }
+                        }
                         if (tool.kind == EditKind.AddBay)
                         {
                             // Bays usually come in opposing pairs; test every pair too.

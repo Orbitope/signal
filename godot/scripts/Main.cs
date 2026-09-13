@@ -64,7 +64,7 @@ namespace SignalGodot
             string level = Arg("level");
             if (puzzleId != null && Worlds.Find(puzzleId) is PuzzleDef p)
             {
-                ShowPuzzle(p, Worlds.All[0].puzzles, Worlds.All[0].title);
+                { var w = Worlds.WorldOf(p); ShowPuzzle(p, w.puzzles, w.title); }
                 if (Arg("answer") == "1") _puzzle.LoadAnswer();
                 if (Arg("run") == "1") _puzzle.Run();
                 if (Arg("popup") is string popup) _puzzle.DebugOpenPopup(popup);
@@ -83,7 +83,11 @@ namespace SignalGodot
         /// present (one for a lone junction, one for networks); otherwise the
         /// aging MaxPressure stand-in. --ai=mp forces the stand-in.</summary>
         public const string JunctionPolicyPath = "res://policies/shared-w1-v4-s0.bin";
-        public const string NetworkPolicyPath = "res://policies/shared-grid3-flow-v4-s0.bin";
+        // No network brain ships yet: the grid policy starved side streets on
+        // two-junction levels and the composite "all-training" brain was still
+        // undertrained (loses to aging MaxPressure on every World 2 shape). An
+        // empty path means the aging MaxPressure stand-in runs networks.
+        public const string NetworkPolicyPath = "";
 
         public static void LoadGameAi()
         {
@@ -95,7 +99,7 @@ namespace SignalGodot
 
         private static System.Func<SignalController, ISignalPolicy> Load(string path, bool learned, out string name)
         {
-            if (learned && FileAccess.FileExists(path))
+            if (learned && path.Length > 0 && FileAccess.FileExists(path))
             {
                 try
                 {

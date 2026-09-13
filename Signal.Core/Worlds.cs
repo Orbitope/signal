@@ -23,11 +23,17 @@ namespace Signal.Core
     /// </summary>
     public static class Worlds
     {
-        public static IReadOnlyList<WorldDef> All { get; } = new List<WorldDef> { World1() };
+        public static IReadOnlyList<WorldDef> All { get; } = new List<WorldDef> { World1(), World2() };
 
         public static PuzzleDef Find(string id)
         {
             foreach (var w in All) foreach (var p in w.puzzles) if (p.id == id) return p;
+            return null;
+        }
+
+        public static WorldDef WorldOf(PuzzleDef p)
+        {
+            foreach (var w in All) if (w.puzzles.Contains(p)) return w;
             return null;
         }
 
@@ -212,6 +218,166 @@ namespace Signal.Core
 
             foreach (var p in w.puzzles) p.level.name = p.title;
             return w;
+        }
+
+        // ------------------------------------------------------------ World 2
+        // Authored as editor documents: the same grid model the in-game editor
+        // produces, so every one of these could have been built by a player.
+
+        static WorldDef World2()
+        {
+            var w = new WorldDef
+            {
+                id = "w2", title = "Two lights",
+                blurb = "Junctions that affect each other. A queue at one light backs into the next, a one-way pair makes a green wave, and the AI has to share the road."
+            };
+
+            // 1. Two junctions on a busy road with all-way stops.
+            {
+                var doc = Pair(spacing: 200f, preset: "east-west", total: 18f);
+                foreach (var j in doc.junctions) j.control = ControlType.AllWayStop;
+                w.puzzles.Add(new PuzzleDef
+                {
+                    id = "w2-1", title = "Two in a row",
+                    intro = "A busy road crosses two quiet streets a block apart, and someone put an all-way stop at both. The main road stops twice for nobody.",
+                    hint = "The main road should keep priority at both junctions.",
+                    level = doc.BuildRaw(),
+                    toolbox = { Tools.AllWayStop(), Tools.TwoWayStop(), Tools.Signal() },
+                    budget = 80, par = 16,
+                    objectives = { Avg(8f), Max(70f) },
+                    answer = { new EditOp { kind = EditKind.SetControl, node = EditorDoc.JunctionId(2, 1), control = ControlType.TwoWayStop, majorAxis = 0 },
+                               new EditOp { kind = EditKind.SetControl, node = EditorDoc.JunctionId(3, 1), control = ControlType.TwoWayStop, majorAxis = 0 } },
+                });
+            }
+
+            // 2. The short block: two signals close together spill into each other.
+            {
+                var doc = Pair(spacing: 90f, preset: "east-west", total: 28f);
+                foreach (var j in doc.junctions) j.control = ControlType.AllWayStop;
+                w.puzzles.Add(new PuzzleDef
+                {
+                    id = "w2-2", title = "The short block",
+                    intro = "Two all-way stops only a few car-lengths apart. Every car that stops at the second one backs into the first, and the block locks solid.",
+                    hint = "The main road must never have to stop between the two. Give it priority at both.",
+                    level = doc.BuildRaw(),
+                    toolbox = { Tools.AllWayStop(), Tools.TwoWayStop(), Tools.Signal(), Tools.TimedPlan() },
+                    budget = 40, par = 16,
+                    objectives = { new ObjectiveDef { kind = ObjectiveKind.NoSpillback }, Avg(45f) },
+                    answer = { new EditOp { kind = EditKind.SetControl, node = EditorDoc.JunctionId(2, 1), control = ControlType.TwoWayStop, majorAxis = 0 },
+                               new EditOp { kind = EditKind.SetControl, node = EditorDoc.JunctionId(3, 1), control = ControlType.TwoWayStop, majorAxis = 0 } },
+                });
+            }
+
+            // 3. Overbuilt: four signals on a quiet block; stops with the right priority flow better.
+            {
+                var doc = Block(preset: "east-west", total: 20f);
+                var p = new PuzzleDef
+                {
+                    id = "w2-3", title = "Overbuilt",
+                    intro = "A quiet block with a full traffic signal on every corner. At this volume the lights make everyone wait for nobody. Find something cheaper and quicker.",
+                    hint = "Which way does most of the traffic go? Let that street keep priority at every corner.",
+                    level = doc.BuildRaw(),
+                    toolbox = { Tools.TwoWayStop(), Tools.AllWayStop(), Tools.Signal() },
+                    budget = 40, par = 32,
+                    objectives = { Avg(12f) },
+                };
+                foreach (var j in doc.junctions)
+                    p.answer.Add(new EditOp { kind = EditKind.SetControl, node = EditorDoc.JunctionId(j.gx, j.gy), control = ControlType.TwoWayStop, majorAxis = 0 });
+                w.puzzles.Add(p);
+            }
+
+            // 4. Starved side streets along an arterial on timed plans.
+            {
+                var doc = Row(3, spacing: 200f, preset: "east-west", total: 22f);
+                var p = new PuzzleDef
+                {
+                    id = "w2-4", title = "Three timed lights",
+                    intro = "Three lights on the main road, each on a fixed plan that gives the side streets 15% of the cycle. Fast for the main road, brutal for everyone else.",
+                    hint = "The AI shares time by need. Remove the plans, or set fairer splits.",
+                    level = doc.BuildRaw(),
+                    toolbox = { Tools.TimedPlan(), Tools.Signal() },
+                    budget = 30, par = 0,
+                    objectives = { Avg(20f), Max(75f) },
+                };
+                for (int gx = 1; gx <= 3; gx++)
+                    p.initialOps.Add(new EditOp { kind = EditKind.Retime, node = EditorDoc.JunctionId(gx, 1), cycle = 60f, splits = new List<float> { 0.15f, 0.85f } });
+                w.puzzles.Add(p);
+            }
+
+            // 5. Rush hour on the pair.
+            {
+                var doc = Pair(spacing: 200f, preset: "balanced", total: 15f, rush: true, duration: 600f);
+                foreach (var j in doc.junctions) j.control = ControlType.AllWayStop;
+                w.puzzles.Add(new PuzzleDef
+                {
+                    id = "w2-5", title = "Rush hour, twice",
+                    intro = "Two all-way stops that cope until the evening peak, then drown together. Whatever you build has to hold for the worst ten minutes.",
+                    hint = "Stops serve one car at a time; lights serve platoons. You may not need to fix both junctions the same way.",
+                    level = doc.BuildRaw(),
+                    toolbox = { Tools.AllWayStop(), Tools.TwoWayStop(), Tools.Signal(), Tools.Roundabout() },
+                    budget = 120, par = 80,
+                    objectives = { Avg(30f), Max(90f) },
+                    answer = { new EditOp { kind = EditKind.SetControl, node = EditorDoc.JunctionId(2, 1), control = ControlType.Signalized },
+                               new EditOp { kind = EditKind.SetControl, node = EditorDoc.JunctionId(3, 1), control = ControlType.Signalized } },
+                });
+            }
+
+            // 6. Two roundabouts, balanced traffic.
+            {
+                var doc = Pair(spacing: 200f, preset: "balanced", total: 26f);
+                w.puzzles.Add(new PuzzleDef
+                {
+                    id = "w2-6", title = "Round and round, twice",
+                    intro = "Two signals a block apart with even traffic from every side. You have the money for a roundabout at each. Is it worth it at both?",
+                    hint = "Balanced flows love a roundabout. Try one first and watch what happens at the other junction.",
+                    level = doc.BuildRaw(),
+                    toolbox = { Tools.AllWayStop(), Tools.TwoWayStop(), Tools.Signal(), Tools.Roundabout() },
+                    budget = 120, par = 120,
+                    objectives = { Avg(12f) },
+                    answer = { new EditOp { kind = EditKind.Roundabout, node = EditorDoc.JunctionId(2, 1) },
+                               new EditOp { kind = EditKind.Roundabout, node = EditorDoc.JunctionId(3, 1) } },
+                });
+            }
+
+            foreach (var p in w.puzzles) p.level.name = p.title;
+            return w;
+        }
+
+        /// <summary>Two junctions side by side on row 1, every outer arm open.</summary>
+        public static EditorDoc Pair(float spacing, string preset, float total, bool rush = false, float duration = 300f)
+        {
+            var doc = new EditorDoc { name = "pair", spacing = spacing, duration = duration };
+            doc.AddJunction(2, 1); doc.AddJunction(3, 1);
+            doc.Connect(2, 1, 3, 1);
+            OpenAllFreeArms(doc);
+            doc.demand = new DemandSpec { preset = preset, total = total, rush = rush };
+            return doc;
+        }
+
+        /// <summary>A 2x2 block: rows 1 and 2, columns 2 and 3.</summary>
+        public static EditorDoc Block(string preset, float total)
+        {
+            var doc = EditorDoc.Starter();
+            doc.demand = new DemandSpec { preset = preset, total = total };
+            return doc;
+        }
+
+        /// <summary>n junctions in a row on row 1.</summary>
+        public static EditorDoc Row(int n, float spacing, string preset, float total)
+        {
+            var doc = new EditorDoc { name = "row", spacing = spacing };
+            for (int gx = 1; gx <= n; gx++) doc.AddJunction(gx, 1);
+            for (int gx = 1; gx < n; gx++) doc.Connect(gx, 1, gx + 1, 1);
+            OpenAllFreeArms(doc);
+            doc.demand = new DemandSpec { preset = preset, total = total };
+            return doc;
+        }
+
+        static void OpenAllFreeArms(EditorDoc doc)
+        {
+            foreach (var j in doc.junctions)
+                for (int d = 0; d < 4; d++)
+                    if (doc.NeighbourVia(j, d, out _) == null) j.SetOpen(d, true);
         }
 
         /// <summary>A river north to south on top of a light balanced background.</summary>
