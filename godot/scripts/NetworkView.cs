@@ -97,7 +97,7 @@ namespace SignalGodot
         {
             if (Runner?.Sim == null) return;
             var net = Runner.Sim.Network;
-            float roadW = Legible(LaneWidthMeters * PixelsPerMeter, 3.5f);
+            float roadW = Legible(LaneWidthMeters * PixelsPerMeter, 7f);
 
             foreach (var link in net.Links)
             {
@@ -113,11 +113,11 @@ namespace SignalGodot
                 var (a, b) = LinkLine(link);
                 float t = kv.Value / SpillFlashDuration;
                 var c = Orbitope.Coral; c.A = 0.25f + 0.6f * t;
-                DrawLine(a, b, c, Legible((6.5f + 3f * t) * PixelsPerMeter / 2.2f, 4f));
+                DrawLine(a, b, c, Legible((6.5f + 3f * t) * PixelsPerMeter / 2.2f, 7f));
             }
 
             // Stop bars at signalized nodes, stress-tinted by head-of-queue wait.
-            float half = Legible(6f, 5f), back = Legible(4f, 3f), barW = Legible(3.5f, 2.5f);
+            float half = Legible(6f, 8f), back = Legible(4f, 5f), barW = Legible(3.5f, 4f);
             foreach (var node in net.Nodes)
             {
                 if (node.Control is not SignalController ctl) continue;
@@ -143,8 +143,8 @@ namespace SignalGodot
                 }
                 // Player override: an amber ring on a light being held by a tap.
                 if (Runner.IsOverriding(node.Id))
-                    DrawArc(ToWorld(node.X, node.Y), Legible(9f * PixelsPerMeter / 2.2f, 9f),
-                            0f, Mathf.Tau, 32, Orbitope.AmberBright, Legible(2.5f, 2f));
+                    DrawArc(ToWorld(node.X, node.Y), Legible(9f * PixelsPerMeter / 2.2f, 14f),
+                            0f, Mathf.Tau, 32, Orbitope.AmberBright, Legible(2.5f, 3f));
             }
         }
 

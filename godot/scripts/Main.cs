@@ -37,6 +37,8 @@ namespace SignalGodot
 
         public override void _Ready()
         {
+            SizeWindowForDisplay();
+
             _runner = new SimRunner();
             AddChild(_runner);
             _runner.Spillback += linkId => _net.FlashSpillback(linkId);
@@ -70,6 +72,26 @@ namespace SignalGodot
             }
             LoadLevel(idx);
             if (_shotPath != null) _runner.TimeScale = 8f;   // reach the capture time quickly
+        }
+
+        /// <summary>
+        /// The project's 1280x800 is the logical (base) size; stretch mode
+        /// canvas_items scales the canvas to the window. On a HiDPI display the
+        /// OS reports a scale > 1, so open the window at base * scale or it
+        /// comes up half size (Godot window sizes are physical pixels).
+        /// </summary>
+        private void SizeWindowForDisplay()
+        {
+            if (DisplayServer.GetName() == "headless") return;
+            float scale = DisplayServer.ScreenGetScale();
+            var baseSize = new Vector2I(
+                ProjectSettings.GetSetting("display/window/size/viewport_width").AsInt32(),
+                ProjectSettings.GetSetting("display/window/size/viewport_height").AsInt32());
+            var size = new Vector2I(Mathf.RoundToInt(baseSize.X * scale), Mathf.RoundToInt(baseSize.Y * scale));
+            var usable = DisplayServer.ScreenGetUsableRect();
+            size = new Vector2I(Mathf.Min(size.X, usable.Size.X), Mathf.Min(size.Y, usable.Size.Y));
+            DisplayServer.WindowSetSize(size);
+            DisplayServer.WindowSetPosition(usable.Position + (usable.Size - size) / 2);
         }
 
         // ------------------------------------------------------------ levels
@@ -130,8 +152,8 @@ namespace SignalGodot
             {
                 BgColor = Orbitope.Surface with { A = 0.92f },
                 BorderColor = Orbitope.Border,
-                ContentMarginLeft = 12, ContentMarginRight = 12,
-                ContentMarginTop = 8, ContentMarginBottom = 8,
+                ContentMarginLeft = 16, ContentMarginRight = 16,
+                ContentMarginTop = 12, ContentMarginBottom = 12,
                 CornerRadiusTopLeft = 4, CornerRadiusTopRight = 4,
                 CornerRadiusBottomLeft = 4, CornerRadiusBottomRight = 4,
             };
@@ -148,33 +170,42 @@ namespace SignalGodot
             return l;
         }
 
+        private Button MakeButton(string text)
+        {
+            var b = new Button { Text = text };
+            b.AddThemeFontOverride("font", Orbitope.Mono);
+            b.AddThemeFontSizeOverride("font_size", 16);
+            return b;
+        }
+
         private void BuildHud()
         {
             var layer = new CanvasLayer();
             AddChild(layer);
 
-            var panel = new PanelContainer { Position = new Vector2(10, 10) };
+            var panel = new PanelContainer { Position = new Vector2(16, 16) };
             panel.AddThemeStyleboxOverride("panel", PanelStyle());
             layer.AddChild(panel);
 
             var col = new VBoxContainer();
+            col.AddThemeConstantOverride("separation", 6);
             panel.AddChild(col);
 
             var top = new HBoxContainer();
             col.AddChild(top);
-            _title = MakeLabel(Orbitope.Rajdhani, 20, Orbitope.TextBright, "SIGNAL");
+            _title = MakeLabel(Orbitope.Rajdhani, 28, Orbitope.TextBright, "SIGNAL");
             top.AddChild(_title);
 
             _pick = new OptionButton();
             _pick.AddThemeFontOverride("font", Orbitope.Mono);
-            _pick.AddThemeFontSizeOverride("font_size", 12);
+            _pick.AddThemeFontSizeOverride("font_size", 16);
             foreach (var n in Levels.Names) _pick.AddItem(n);
             _pick.ItemSelected += idx => LoadLevel((int)idx);
             top.AddChild(_pick);
 
-            _hud = MakeLabel(Orbitope.Mono, 13, Orbitope.TextPrimary);
+            _hud = MakeLabel(Orbitope.Mono, 16, Orbitope.TextPrimary);
             col.AddChild(_hud);
-            _hint = MakeLabel(Orbitope.Mono, 11, Orbitope.TextMuted,
+            _hint = MakeLabel(Orbitope.Mono, 13, Orbitope.TextMuted,
                 "tap an approach to hold it green · space pause · 1/2/4 speed · R restart · [ ] level · F fit");
             col.AddChild(_hint);
         }
@@ -193,19 +224,20 @@ namespace SignalGodot
             center.AddChild(_results);
 
             var col = new VBoxContainer();
+            col.AddThemeConstantOverride("separation", 10);
             _results.AddChild(col);
 
-            _resultsTitle = MakeLabel(Orbitope.Rajdhani, 24, Orbitope.TextBright, "ROUND OVER");
+            _resultsTitle = MakeLabel(Orbitope.Rajdhani, 34, Orbitope.TextBright, "ROUND OVER");
             col.AddChild(_resultsTitle);
-            _resultsText = MakeLabel(Orbitope.Mono, 13, Orbitope.TextPrimary);
+            _resultsText = MakeLabel(Orbitope.Mono, 17, Orbitope.TextPrimary);
             col.AddChild(_resultsText);
 
             var row = new HBoxContainer();
             col.AddChild(row);
-            var restart = new Button { Text = "Restart (R)" };
+            var restart = MakeButton("Restart (R)");
             restart.Pressed += Restart;
             row.AddChild(restart);
-            var next = new Button { Text = "Next level (])" };
+            var next = MakeButton("Next level (])");
             next.Pressed += () => LoadLevel(_levelIdx + 1);
             row.AddChild(next);
         }

@@ -15,7 +15,7 @@ namespace SignalGodot
         public SimRunner Runner;
         public NetworkView Net;
 
-        [Export] public float MinScreenLength = 7f;   // never draw a car shorter than this on screen
+        [Export] public float MinScreenLength = 12f;   // never draw a car shorter than this on screen
 
         // Steel = calm flow; ramp to Amber, then AmberBright, as wait climbs.
         // Never coral (reserved for spillback).
