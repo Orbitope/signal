@@ -207,6 +207,22 @@ retime), objective check over seeds, stars. World 1 authored in code, the way
 `Scenarios.cs` levels are.
 *Gate:* someone who has not seen the game finishes five World 1 puzzles
 without help, and says which one was the most satisfying.
+*Status: built 2026-09-13, gate not yet run (needs a playtester).* Core has
+`PuzzleDef`/`EditOp`/`ToolDef`/`ObjectiveDef`, `Edits.Apply` (control swap,
+roundabout macro, one-way, turn ban, left-turn bay, timed plan; refuses an
+edit that strands a demand flow), `PhaseGen` (phases from geometry, protected
+lefts where a bay exists), `PuzzleScorer` (every objective on every seed,
+stars vs par) and World 1: eight one-junction puzzles, each with an authored
+answer. `signal-headless puzzle` prints every single-tool answer's measured
+result, which is how the thresholds were set. Godot has a menu, the puzzle
+screen (click a junction or approach for priced tools, Run scores all seeds
+then replays seed 0 live, stars saved to user://) and a legibility pass.
+Two sim fidelity fixes fell out of calibration: permissive lefts now clear on
+yellow (the sneaker), and a major-road left at a two-way stop yields. The
+game's light-runner is `AgingMaxPressurePolicy` (MaxPressure with a max-out);
+plain MaxPressure is untouched for the article. Known limits: MaxPressure
+handles 3–4 phase plans poorly, so the bay puzzle is set on a timed light;
+the trained policy (P2) should revisit that. Smoke gate: 34 checks.
 
 **P2 — AI in engine** (1–2 weeks)
 Section 7. AI-driven lights become the default; the ghost is the real policy.
