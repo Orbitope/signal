@@ -58,7 +58,8 @@ share one representation, so the toolbox is the editor with tools switched off.
 - A **puzzle** is a `LevelDef` plus a new **`PuzzleDef`**:
   - `objectives[]` — see section 4
   - `toolbox[]` — which edit ops are allowed
-  - `budget` — how many ops, or a money total with per-op costs
+  - `budget` — a money total; every tool has a price (a roundabout costs more
+    than a stop sign), so the tradeoff is real
   - `par` — the budget the star rating is scored against
   - `seeds[]` — evaluation seeds (never score on one seed; we learned that)
   - `intro`, `hint` — text
@@ -237,22 +238,21 @@ Options:
   browser with no engine. Shareable puzzle *results* (a link that replays your
   solution) could use that, without porting the game.
 
-Recommendation: A now, decide on B before P4 based on how the playtest goes.
+Decided (section 10): **A, desktop only** for v1. B is the web fallback to
+revisit after release, not before.
 
-## 10. Decisions I need from you
+## 10. Decisions (2026-09-12)
 
-1. **Real-time or turn-based puzzles?** Recommended: build, then run at speed
-   and watch; tapping is only the tactical mode. Casual means no twitch.
-2. **Budget: a count of changes, or money with per-tool prices?** Money lets a
-   roundabout cost more than a stop sign, which is a real tradeoff. Count is
-   simpler to explain.
-3. **Grid-snapped editor?** Recommended yes (section 6). Free-form is a much
-   bigger project and breaks phase auto-generation.
-4. **Which AI drives the lights first release?** MaxPressure (zero work, honest)
-   or the trained policy (needs P2). Recommended: MaxPressure in P1, trained
-   policy in P2, and make the difference a feature ("hire the better AI").
-5. **How big is v1?** Recommended: three worlds, ~24 puzzles, plus the editor.
-6. **Platform:** are you fine shipping native (option A) for v1?
+1. **Turn-based.** Build, then run at speed and watch. Tapping is only the
+   tactical mode. Casual means no twitch.
+2. **Budget is money with per-tool prices.** A roundabout costs more than a
+   stop sign; par is a dollar figure, and stars score against it.
+3. **Grid-snapped editor.** Free-form is out of scope.
+4. **MaxPressure drives the lights in P1; the trained policy replaces it in
+   P2**, and the difference is surfaced as a feature ("hire the better AI").
+5. **v1 is three worlds, about 24 puzzles, plus the editor.**
+6. **Ship native, desktop only** (Windows, macOS, Linux). No mobile and no web
+   in v1; the GDScript port (section 9, option B) is a post-release question.
 
 ## 11. Non-goals for v1
 
