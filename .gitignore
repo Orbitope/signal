@@ -19,3 +19,4 @@ UnityReference/
 # macOS
 .DS_Store
 build/
+training/runs/*.log

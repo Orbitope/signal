@@ -29,5 +29,5 @@ project/assembly_name="Signal.Godot"
 
 renderer/rendering_method="gl_compatibility"
 renderer/rendering_method.mobile="gl_compatibility"
-environment/defaults/default_clear_color=Color(0.0667, 0.0627, 0.0353, 1)
 textures/vram_compression/import_etc2_astc=true
+environment/defaults/default_clear_color=Color(0.0667, 0.0627, 0.0353, 1)
