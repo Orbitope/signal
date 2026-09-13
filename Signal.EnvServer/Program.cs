@@ -67,32 +67,14 @@ class EnvHost
 
 static class Levels
 {
-    public static LevelDef Get(string name) => name switch
-    {
-        "fourway" => new LevelDef { network = NetworkBuilder.FourWay(ControlType.Signalized),
-                                    demand = NetworkBuilder.SymmetricDemand(22f) },
-        "fourway-bays" => new LevelDef { network = LaneBuilder.FourWayWithBays(),
-                                         demand = NetworkBuilder.SymmetricDemand(30f) },
-        "fourway-bays2" => new LevelDef { network = LaneBuilder.FourWayWithBays(throughLanes: 2),
-                                          demand = NetworkBuilder.SymmetricDemand(40f) },
-        "grid2" => new LevelDef { network = GridBuilder.Grid(2), demand = GridBuilder.GridDemand(2, 12f) },
-        "grid3" => new LevelDef { network = GridBuilder.Grid(3), demand = GridBuilder.GridDemand(3, 12f) },
-        "grid5" => new LevelDef { network = GridBuilder.Grid(5), demand = GridBuilder.GridDemand(5, 12f) },
-        // Corridor: real road hierarchy — fast arterials, a one-way side street,
-        // demand concentrated on the thoroughfares. 5x3 = 15 intersections.
-        "corridor" => new LevelDef { network = CorridorBuilder.Corridor(5, 3),
-                                     demand = CorridorBuilder.CorridorDemand(5, 3) },
-        "corridor-rush" => new LevelDef { network = CorridorBuilder.Corridor(5, 3),
-                                          demand = CorridorBuilder.CorridorDemand(5, 3, rush: true) },
-        "corridor7" => new LevelDef { network = CorridorBuilder.Corridor(7, 3),
-                                      demand = CorridorBuilder.CorridorDemand(7, 3) },
-        _ when name.StartsWith("sc-") => Scenarios.Get(name)
-                                         ?? throw new ArgumentException($"unknown scenario '{name}'"),
-        _ when name.StartsWith("file:") =>
-            JsonSerializer.Deserialize<LevelDef>(File.ReadAllText(name.Substring(5)),
-                new JsonSerializerOptions { IncludeFields = true }),
-        _ => throw new ArgumentException($"unknown level '{name}'")
-    };
+    // Built-in names live in Signal.Core.Levels (shared with the Godot game and
+    // the headless bench). Only the file-backed case needs JSON, which Core
+    // deliberately does not depend on, so it stays here.
+    public static LevelDef Get(string name) =>
+        name.StartsWith("file:")
+            ? JsonSerializer.Deserialize<LevelDef>(File.ReadAllText(name.Substring(5)),
+                  new JsonSerializerOptions { IncludeFields = true })
+            : Signal.Core.Levels.Get(name);
 }
 
 class Program
