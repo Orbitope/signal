@@ -258,7 +258,10 @@ namespace SignalGodot
             // bars from tangling in the middle; signal state is colour AND
             // shape (solid = go, broken = stop, thin = clearing) for
             // colour-blind players.
-            float half = Legible(2.4f * PixelsPerMeter, 13f), back = Legible(2f * PixelsPerMeter, 8f), barW = Legible(1.6f * PixelsPerMeter, 6f);
+            int junctionCount = 0;
+            foreach (var node in net.Nodes) if (Junctions.IsEditable(node)) junctionCount++;
+            _dense = junctionCount > 20 ? 0.6f : 1f;   // forty stop signs at fit zoom must not crowd the roads
+            float half = Legible(2.4f * PixelsPerMeter, 13f * _dense), back = Legible(2f * PixelsPerMeter, 8f * _dense), barW = Legible(1.6f * PixelsPerMeter, 6f * _dense);
             foreach (var node in net.Nodes)
             {
                 if (!Junctions.IsEditable(node)) continue;
@@ -311,13 +314,15 @@ namespace SignalGodot
             if (ShowCompass) DrawCompass(net);
         }
 
+        private float _dense = 1f;
+
         private void DrawStopSign(Link link, float back)
         {
             var (a, b) = LinkLine(link);
             var dir = (b - a).Normalized();
             var right = new Vector2(-dir.Y, dir.X);
-            var c = b - dir * back + right * Legible(2.6f * PixelsPerMeter, 12f);
-            float r = Legible(1.9f * PixelsPerMeter, 10f);
+            var c = b - dir * back + right * Legible(2.6f * PixelsPerMeter, 12f * _dense);
+            float r = Legible(1.9f * PixelsPerMeter, 10f * _dense);
             var pts = new Vector2[8];
             for (int i = 0; i < 8; i++)
             {
@@ -329,7 +334,7 @@ namespace SignalGodot
             DrawPolyline(outline, SignEdge, Legible(0.5f, 1.5f));
             // Stop line across the lane.
             var barCenter = b - dir * back;
-            float half = Legible(2.2f * PixelsPerMeter, 12f);
+            float half = Legible(2.2f * PixelsPerMeter, 12f * _dense);
             DrawLine(barCenter - right * half, barCenter + right * half, SignEdge with { A = 0.85f }, Legible(0.9f, 3f));
         }
 
@@ -338,8 +343,8 @@ namespace SignalGodot
             var (a, b) = LinkLine(link);
             var dir = (b - a).Normalized();
             var right = new Vector2(-dir.Y, dir.X);
-            var c = b - dir * back + right * Legible(2.6f * PixelsPerMeter, 12f);
-            float r = Legible(2.1f * PixelsPerMeter, 11f);
+            var c = b - dir * back + right * Legible(2.6f * PixelsPerMeter, 12f * _dense);
+            float r = Legible(2.1f * PixelsPerMeter, 11f * _dense);
             // Inverted triangle: point toward the junction.
             var pts = new[] { c - dir * r * 0.6f + right * r, c - dir * r * 0.6f - right * r, c + dir * r * 0.9f };
             DrawColoredPolygon(pts, SignEdge);

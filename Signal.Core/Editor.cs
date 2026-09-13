@@ -46,6 +46,10 @@ namespace Signal.Core
         public string preset = "balanced";              // balanced | east-west | north-south
         public float total = 24f;                       // veh/min over the whole map
         public bool rush;                               // peak in the middle third
+        /// <summary>Tidal traffic: -1 = none; otherwise a side of the map (0 N, 1 E,
+        /// 2 S, 3 W). Flows INTO that side peak early (the morning run), flows OUT
+        /// of it peak late (the afternoon), everything else stays flat.</summary>
+        public int tide = -1;
         public List<ArmWeight> arms = new List<ArmWeight>();   // asymmetry: a busy side street, a quiet one
 
         public float ArmWeightOf(int boundaryId)
@@ -268,7 +272,16 @@ namespace Signal.Core
             foreach (var (o, t, w) in weights)
             {
                 float rate = demand.total * w / sum;
-                RateCurve curve = demand.rush
+                RateCurve curve;
+                if (demand.tide >= 0 && (Side(t, cx, cy) == demand.tide || Side(o, cx, cy) == demand.tide))
+                {
+                    bool inbound = Side(t, cx, cy) == demand.tide;   // toward the tide side: morning
+                    float T = duration;
+                    curve = inbound
+                        ? new RateCurve { times = { 0f, T * 0.1f, T * 0.3f, T * 0.4f, T }, rates = { rate * 0.4f, rate * 2.2f, rate * 2.2f, rate * 0.3f, rate * 0.3f } }
+                        : new RateCurve { times = { 0f, T * 0.6f, T * 0.7f, T * 0.9f, T }, rates = { rate * 0.3f, rate * 0.3f, rate * 2.2f, rate * 2.2f, rate * 0.4f } };
+                }
+                else curve = demand.rush
                     ? new RateCurve
                     {
                         times = { 0f, duration * 0.25f, duration * 0.4f, duration * 0.65f, duration * 0.8f, duration },
@@ -278,6 +291,13 @@ namespace Signal.Core
                 d.flows.Add(new OdFlowDef { origin = o.id, dest = t.id, rate = curve });
             }
             return d;
+        }
+
+        /// <summary>Which side of the map a boundary node sits on: 0 N, 1 E, 2 S, 3 W.</summary>
+        static int Side(NodeDef n, float cx, float cy)
+        {
+            float dx = n.x - cx, dy = n.y - cy;
+            return Math.Abs(dx) > Math.Abs(dy) ? (dx > 0 ? 1 : 3) : (dy > 0 ? 0 : 2);
         }
 
         // ------------------------------------------------------------ templates
@@ -299,7 +319,7 @@ namespace Signal.Core
             var c = new EditorDoc { name = name, spacing = spacing, stub = stub, duration = duration, cols = cols, rows = rows };
             foreach (var j in junctions) c.junctions.Add(new JunctionDef { gx = j.gx, gy = j.gy, control = j.control, majorAxis = j.majorAxis, openN = j.openN, openE = j.openE, openS = j.openS, openW = j.openW, modeN = j.modeN, modeE = j.modeE, modeS = j.modeS, modeW = j.modeW });
             foreach (var s in streets) c.streets.Add(new StreetDef { ax = s.ax, ay = s.ay, bx = s.bx, by = s.by, ab = s.ab, ba = s.ba });
-            c.demand = new DemandSpec { preset = demand.preset, total = demand.total, rush = demand.rush };
+            c.demand = new DemandSpec { preset = demand.preset, total = demand.total, rush = demand.rush, tide = demand.tide };
             foreach (var a in demand.arms) c.demand.arms.Add(new ArmWeight { gx = a.gx, gy = a.gy, dir = a.dir, weight = a.weight });
             foreach (var o in ops) c.ops.Add(o.Clone());
             return c;
