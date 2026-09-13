@@ -106,7 +106,7 @@ namespace Signal.Core
             if (puzzle.answer != null) list.Add(("AUTHORED ANSWER", new List<EditOp>(puzzle.answer)));
 
             // Multi-junction levels: also try the same control on every junction at once.
-            var junctions = lv.network.nodes.FindAll(n => !n.isBoundary && lv.network.links.FindAll(l => l.to == n.id).Count >= 3);
+            var junctions = lv.network.nodes.FindAll(n => Junctions.IsEditable(lv.network, n));
             if (junctions.Count > 1)
                 foreach (var tool in puzzle.toolbox)
                 {
@@ -134,8 +134,7 @@ namespace Signal.Core
                     case EditKind.Retime:
                         foreach (var nd in lv.network.nodes)
                         {
-                            if (nd.isBoundary) continue;
-                            if (lv.network.links.FindAll(l => l.to == nd.id).Count < 3) continue;   // forks, ring nodes
+                            if (!Junctions.IsEditable(lv.network, nd)) continue;
                             if (tool.kind == EditKind.SetControl && (tool.control == ControlType.TwoWayStop || tool.control == ControlType.YieldEntry))
                             {
                                 for (int axis = 0; axis < 2; axis++)
@@ -211,8 +210,8 @@ namespace Signal.Core
         {
             var list = new List<(string, List<EditOp>)>();
             var lv = puzzle.level;
-            var junctions = lv.network.nodes.FindAll(n => !n.isBoundary && lv.network.links.FindAll(l => l.to == n.id).Count >= 3);
-            if (junctions.Count == 0 || junctions.Count > 5) return list;
+            var junctions = lv.network.nodes.FindAll(n => Junctions.IsEditable(lv.network, n));
+            if (junctions.Count == 0) return list;
             var options = new List<(string tag, Func<int, EditOp> make)> { ("keep", _ => null) };
             foreach (var t in puzzle.toolbox)
             {
@@ -227,6 +226,45 @@ namespace Signal.Core
                     options.Add(("ring", id => new EditOp { kind = EditKind.Roundabout, node = id }));
             }
             int k = junctions.Count, n = options.Count;
+            if (k > 5)
+            {
+                // Too many for exhaustion: coordinate descent from "keep everything",
+                // scored on worst-seed average wait. Every visited assignment is
+                // returned so the table shows the path and the final answer.
+                var cur = new int[k];
+                float Score(int[] assign, out List<EditOp> ops)
+                {
+                    var sol = Solution.From(puzzle.initialOps);
+                    for (int i = 0; i < k; i++) { var op = options[assign[i]].make(junctions[i].id); if (op != null) sol.Add(op); }
+                    ops = sol.Ops;
+                    var r = Evaluate(puzzle, ops);
+                    if (r.Error != null) return float.MaxValue;
+                    float worst = 0f; foreach (var o in r.Objectives) if (o.Def.kind == ObjectiveKind.AvgWait) worst = o.Worst;
+                    return worst > 0f ? worst : r.MeanAvgWait;
+                }
+                string Label(int[] assign) { var parts = new List<string>(); foreach (var a in assign) parts.Add(options[a].tag); return string.Join("/", parts); }
+                float best = Score(cur, out var bestOps);
+                list.Add((Label(cur), bestOps));
+                bool improved = true; int rounds = 0;
+                while (improved && rounds++ < 6)
+                {
+                    improved = false;
+                    for (int i = 0; i < k; i++)
+                    {
+                        int keepOpt = cur[i];
+                        for (int o = 0; o < n; o++)
+                        {
+                            if (o == keepOpt) continue;
+                            cur[i] = o;
+                            float sc = Score(cur, out var ops);
+                            list.Add((Label(cur), ops));
+                            if (sc < best - 0.05f) { best = sc; keepOpt = o; improved = true; }
+                        }
+                        cur[i] = keepOpt;
+                    }
+                }
+                return list;
+            }
             long total = 1; for (int i = 0; i < k; i++) total *= n;
             for (long code = 0; code < total; code++)
             {

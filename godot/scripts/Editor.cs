@@ -328,7 +328,7 @@ namespace SignalGodot
 
             _exportCol.AddChild(Ui.Label("Goals", Ui.Small, Orbitope.TextMuted, Orbitope.Rajdhani));
             var goals = new List<(CheckButton on, SpinBox v, ObjectiveKind kind)>();
-            foreach (var (kind, label, def) in new[] { (ObjectiveKind.AvgWait, "Average wait under (s)", 20.0), (ObjectiveKind.MaxWait, "Nobody waits more than (s)", 90.0), (ObjectiveKind.ClearCars, "Get at least this many cars through", 100.0), (ObjectiveKind.NoSpillback, "No spillback", 0.0) })
+            foreach (var (kind, label, def) in new[] { (ObjectiveKind.AvgWait, "Average wait under (s)", 20.0), (ObjectiveKind.MaxWait, "Nobody waits more than (s)", 90.0), (ObjectiveKind.ClearCars, "Get at least this many cars through", 100.0), (ObjectiveKind.GateQueue, "Never more than this many cars stuck at an entrance", 8.0), (ObjectiveKind.NoSpillback, "No spillback", 0.0) })
             {
                 var row = Ui.Row(8);
                 var on = new CheckButton { Text = label, ButtonPressed = kind == ObjectiveKind.AvgWait };
@@ -439,9 +439,14 @@ namespace SignalGodot
                     else
                     {
                         bool open = j.Open(dir);
-                        colx.AddChild(Ui.Button($"{EditorDoc.DirName[dir]}: {(open ? "open to the outside" : "closed")}  (toggle)", () =>
+                        string state = !open ? "closed" : JunctionDef.ModeName(j.Mode(dir));
+                        colx.AddChild(Ui.Button($"{EditorDoc.DirName[dir]}: {state}  (change)", () =>
                         {
-                            j.SetOpen(dir, !open);
+                            // Cycle: closed -> open both ways -> entry only -> exit only -> closed.
+                            if (!open) { j.SetOpen(dir, true); j.SetMode(dir, 0); }
+                            else if (j.Mode(dir) == 0) j.SetMode(dir, 1);
+                            else if (j.Mode(dir) == 1) j.SetMode(dir, 2);
+                            else { j.SetOpen(dir, false); j.SetMode(dir, 0); }
                             _popup.Close(); Rebuild();
                         }, size: Ui.Small + 1));
                     }

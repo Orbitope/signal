@@ -9,6 +9,7 @@ namespace Signal.Core
         public float CompletedWaitSum, CompletedTravelSum;
         public float MaxWait;                 // worst individual wait seen (starvation detector)
         public int SpillbackEvents;
+        public int MaxGateQueue;              // most cars ever held at one entrance (a ramp backing onto the highway)
 
         /// <summary>Average wait over EVERY vehicle that has ever existed —
         /// completed, in-system, and held at entry gates. Counting only

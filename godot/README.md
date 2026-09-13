@@ -16,7 +16,9 @@ godot --headless --path . --import
 
 - **Menu** (`Menu.cs`) — home and the puzzle list with stars.
 - **Puzzles** (`PuzzlePlay.cs`, GAME_PLAN P1) — World 1 (eight one-junction
-  puzzles) and World 2 "Networks" (seven multi-junction puzzles) from `Signal.Core.Worlds`, plus
+  puzzles) and World 2 "Networks" (seven multi-junction puzzles) and World 3 "Real roads"
+  (an interchange, frontage roads, a stadium letting out, right-in/right-out)
+  from `Signal.Core.Worlds`, plus
   anything exported from the editor. Left panel: the brief, goals, money, your
   changes, Run. Click the junction or an approach on the map for the tools
   this puzzle allows, each with a price. Run scores every seed instantly and
@@ -26,7 +28,8 @@ godot --headless --path . --import
 - **Editor** (`Editor.cs`, GAME_PLAN P3) — grid-snapped. Junctions mode:
   click a cell to place or remove a junction. Streets mode: click two
   neighbouring junctions to join or unjoin them. Inspect mode: a junction's
-  control, each arm's direction or "open to the outside", roundabout, timed
+  control, each arm's direction or "open to the outside" (both ways, entry
+  only like an off-ramp, or exit only like an on-ramp), roundabout, timed
   plan; a street's bay or no-left. Traffic is a preset + total + rush toggle.
   Run it, Save/Load (`user://levels`), or Export puzzle with goals, a toolbox
   and a budget (`user://puzzles`), which then appears under Puzzles → Your

@@ -150,8 +150,7 @@ namespace SignalGodot
 
         /// <summary>A junction a player can edit: not a map edge, not a
         /// roundabout entry, not a lane fork — a real crossroads or T.</summary>
-        public static bool IsEditable(Signal.Core.Node n)
-            => !n.IsBoundary && !(n.Control is YieldEntryControl) && n.InLinks.Count >= 3;
+        public static bool IsEditable(Signal.Core.Node n) => Junctions.IsEditable(n);
 
         public override void _Process(double delta)
         {
@@ -196,7 +195,10 @@ namespace SignalGodot
                         DrawLine(c, end, ghost, w);
                         float a = Legible(3f * PixelsPerMeter, 8f);
                         var right = new Vector2(-dir.Y, dir.X);
-                        DrawColoredPolygon(new[] { end + dir * a, end - dir * a * 0.4f + right * a * 0.8f, end - dir * a * 0.4f - right * a * 0.8f }, Orbitope.TextMuted);
+                        int mode = j.Mode(d);
+                        // Arrowheads: outward for an exit, inward for an entry, both when open both ways.
+                        if (mode != 1) DrawColoredPolygon(new[] { end + dir * a, end - dir * a * 0.4f + right * a * 0.8f, end - dir * a * 0.4f - right * a * 0.8f }, Orbitope.TextMuted);
+                        if (mode != 2) { var e2 = end - dir * a * 1.6f; DrawColoredPolygon(new[] { e2 - dir * a, e2 + dir * a * 0.4f + right * a * 0.8f, e2 + dir * a * 0.4f - right * a * 0.8f }, Orbitope.AmberBright); }
                     }
                 float half = Legible(4f * PixelsPerMeter, 9f);
                 DrawRect(new Rect2(c - new Vector2(half, half), new Vector2(2f * half, 2f * half)), Orbitope.Raised.Lerp(Orbitope.Border, 0.5f));
@@ -257,7 +259,7 @@ namespace SignalGodot
             float half = Legible(2.4f * PixelsPerMeter, 13f), back = Legible(2f * PixelsPerMeter, 8f), barW = Legible(1.6f * PixelsPerMeter, 6f);
             foreach (var node in net.Nodes)
             {
-                if (node.IsBoundary || node.InLinks.Count < 3) continue;
+                if (!Junctions.IsEditable(node)) continue;
                 DrawCircle(ToWorld(node.X, node.Y), Legible(3.2f * PixelsPerMeter, 10f), RoadEdge);
             }
             foreach (var node in net.Nodes)

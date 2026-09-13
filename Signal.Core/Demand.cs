@@ -70,6 +70,7 @@ namespace Signal.Core
                 {
                     // Held at the gate: wait accrues for everyone in the queue.
                     foreach (var w in q) w.Wait += dt;
+                    if (q.Count > sim.Metrics.MaxGateQueue) sim.Metrics.MaxGateQueue = q.Count;
                 }
             }
         }

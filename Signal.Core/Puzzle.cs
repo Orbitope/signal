@@ -84,7 +84,7 @@ namespace Signal.Core
             => op.kind == kind && (kind != EditKind.SetControl || op.control == control);
     }
 
-    public enum ObjectiveKind { AvgWait, MaxWait, ClearCars, NoSpillback }
+    public enum ObjectiveKind { AvgWait, MaxWait, ClearCars, NoSpillback, GateQueue }
 
     [Serializable] public class ObjectiveDef
     {
@@ -97,6 +97,7 @@ namespace Signal.Core
             ObjectiveKind.MaxWait => $"Nobody waits more than {value:0.#} s",
             ObjectiveKind.ClearCars => $"Get {value:F0} cars through",
             ObjectiveKind.NoSpillback => "No queue backs into another junction",
+            ObjectiveKind.GateQueue => $"Never more than {value:F0} cars backed up at an entrance",
             _ => kind.ToString()
         };
 
@@ -107,6 +108,7 @@ namespace Signal.Core
             ObjectiveKind.MaxWait => sim.Metrics.MaxWait,
             ObjectiveKind.ClearCars => sim.Metrics.Completed,
             ObjectiveKind.NoSpillback => sim.Metrics.SpillbackEvents,
+            ObjectiveKind.GateQueue => sim.Metrics.MaxGateQueue,
             _ => 0f
         };
 
@@ -124,6 +126,7 @@ namespace Signal.Core
         {
             ObjectiveKind.ClearCars => $"{measured:F0} cars",
             ObjectiveKind.NoSpillback => measured <= 0f ? "none" : $"{measured:F0}",
+            ObjectiveKind.GateQueue => $"{measured:F0} cars",
             _ => $"{measured:F0} s"
         };
     }
@@ -161,6 +164,23 @@ namespace Signal.Core
         public string blurb = "";
         public int unlockStars = 0;           // total stars needed (across earlier worlds) to open this world
         public List<PuzzleDef> puzzles = new List<PuzzleDef>();
+    }
+
+    public static class Junctions
+    {
+        /// <summary>A junction a player can edit: not a map edge, not a lane fork
+        /// (one in-link), not a roundabout entry. Two in and two out is enough:
+        /// a crossing of one-way streets is a real junction.</summary>
+        public static bool IsEditable(Node n)
+            => !n.IsBoundary && !(n.Control is YieldEntryControl) && n.InLinks.Count >= 2 && n.OutLinks.Count >= 2;
+
+        public static bool IsEditable(NetworkDef net, NodeDef nd)
+        {
+            if (nd.isBoundary || nd.control == ControlType.YieldEntry) return false;
+            int ins = 0, outs = 0;
+            foreach (var l in net.links) { if (l.to == nd.id) ins++; if (l.from == nd.id) outs++; }
+            return ins >= 2 && outs >= 2;
+        }
     }
 
     public class PuzzleException : Exception

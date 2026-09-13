@@ -137,8 +137,7 @@ namespace Signal.Core
         public static int JunctionCount(Simulation sim)
         {
             int n = 0;
-            foreach (var node in sim.Network.Nodes)
-                if (!node.IsBoundary && node.InLinks.Count >= 3 && !(node.Control is YieldEntryControl)) n++;
+            foreach (var node in sim.Network.Nodes) if (Junctions.IsEditable(node)) n++;
             return n;
         }
 

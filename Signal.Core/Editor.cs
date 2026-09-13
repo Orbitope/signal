@@ -18,9 +18,15 @@ namespace Signal.Core
         public ControlType control = ControlType.Signalized;
         public int majorAxis = 0;                       // TwoWayStop: 0 = E-W keeps priority
         public bool openN, openE, openS, openW;         // arm to the outside (entry + exit)
+        public int modeN, modeE, modeS, modeW;          // open arm: 0 = both ways, 1 = entry only (an off-ramp), 2 = exit only (an on-ramp)
 
         public bool Open(int dir) => dir switch { 0 => openN, 1 => openE, 2 => openS, _ => openW };
         public void SetOpen(int dir, bool v) { switch (dir) { case 0: openN = v; break; case 1: openE = v; break; case 2: openS = v; break; default: openW = v; break; } }
+        public int Mode(int dir) => dir switch { 0 => modeN, 1 => modeE, 2 => modeS, _ => modeW };
+        public void SetMode(int dir, int m) { switch (dir) { case 0: modeN = m; break; case 1: modeE = m; break; case 2: modeS = m; break; default: modeW = m; break; } }
+        public bool HasEntry(int dir) => Open(dir) && Mode(dir) != 2;
+        public bool HasExit(int dir) => Open(dir) && Mode(dir) != 1;
+        public static string ModeName(int m) => m == 1 ? "entry only" : m == 2 ? "exit only" : "open both ways";
     }
 
     [Serializable] public class StreetDef
@@ -176,11 +182,12 @@ namespace Signal.Core
                 for (int d = 0; d < 4; d++)
                 {
                     if (NeighbourVia(j, d, out _) != null) arms++;
-                    else if (j.Open(d)) { arms++; entries++; exits++; }
+                    else if (j.Open(d)) { arms++; if (j.HasEntry(d)) entries++; if (j.HasExit(d)) exits++; }
                 }
                 if (arms < 2) list.Add($"junction ({j.gx},{j.gy}) needs at least two streets");
             }
             if (entries == 0) list.Add("open at least one arm to the outside so traffic can enter");
+            if (exits == 0) list.Add("open at least one arm to the outside so traffic can leave");
             return list;
         }
 
@@ -211,8 +218,8 @@ namespace Signal.Core
                     {
                         int b = BoundaryId(j.gx, j.gy, d);
                         net.nodes.Add(new NodeDef { id = b, x = (j.gx + DX[d]) * spacing - DX[d] * (spacing - stub), y = -((j.gy + DY[d]) * spacing - DY[d] * (spacing - stub)), isBoundary = true });
-                        net.links.Add(new LinkDef { id = EntryLinkId(j.gx, j.gy, d), from = b, to = JunctionId(j.gx, j.gy), length = stub });
-                        net.links.Add(new LinkDef { id = ExitLinkId(j.gx, j.gy, d), from = JunctionId(j.gx, j.gy), to = b, length = stub });
+                        if (j.HasEntry(d)) net.links.Add(new LinkDef { id = EntryLinkId(j.gx, j.gy, d), from = b, to = JunctionId(j.gx, j.gy), length = stub });
+                        if (j.HasExit(d)) net.links.Add(new LinkDef { id = ExitLinkId(j.gx, j.gy, d), from = JunctionId(j.gx, j.gy), to = b, length = stub });
                     }
                 }
             }
@@ -234,16 +241,21 @@ namespace Signal.Core
         DemandDef BuildDemand(LevelDef lv)
         {
             var d = new DemandDef();
-            var entries = new List<NodeDef>();
-            foreach (var n in lv.network.nodes) if (n.isBoundary) entries.Add(n);
-            if (entries.Count < 2) return d;
+            var entries = new List<NodeDef>(); var exits = new List<NodeDef>();
+            foreach (var n in lv.network.nodes)
+            {
+                if (!n.isBoundary) continue;
+                if (lv.network.links.Exists(l => l.from == n.id)) entries.Add(n);
+                if (lv.network.links.Exists(l => l.to == n.id)) exits.Add(n);
+            }
+            if (entries.Count == 0 || exits.Count == 0) return d;
             // Weight each origin→destination pair by axis preference.
             float cx = 0, cy = 0;
             foreach (var n in lv.network.nodes) if (!n.isBoundary) { cx += n.x; cy += n.y; }
             cx /= Math.Max(1, junctions.Count); cy /= Math.Max(1, junctions.Count);
             var weights = new List<(NodeDef o, NodeDef t, float w)>();
             float sum = 0f;
-            foreach (var o in entries) foreach (var t in entries)
+            foreach (var o in entries) foreach (var t in exits)
             {
                 if (o == t) continue;
                 bool oEw = Math.Abs(o.x - cx) > Math.Abs(o.y - cy), tEw = Math.Abs(t.x - cx) > Math.Abs(t.y - cy);
@@ -285,7 +297,7 @@ namespace Signal.Core
         public EditorDoc Clone()
         {
             var c = new EditorDoc { name = name, spacing = spacing, stub = stub, duration = duration, cols = cols, rows = rows };
-            foreach (var j in junctions) c.junctions.Add(new JunctionDef { gx = j.gx, gy = j.gy, control = j.control, majorAxis = j.majorAxis, openN = j.openN, openE = j.openE, openS = j.openS, openW = j.openW });
+            foreach (var j in junctions) c.junctions.Add(new JunctionDef { gx = j.gx, gy = j.gy, control = j.control, majorAxis = j.majorAxis, openN = j.openN, openE = j.openE, openS = j.openS, openW = j.openW, modeN = j.modeN, modeE = j.modeE, modeS = j.modeS, modeW = j.modeW });
             foreach (var s in streets) c.streets.Add(new StreetDef { ax = s.ax, ay = s.ay, bx = s.bx, by = s.by, ab = s.ab, ba = s.ba });
             c.demand = new DemandSpec { preset = demand.preset, total = demand.total, rush = demand.rush };
             foreach (var a in demand.arms) c.demand.arms.Add(new ArmWeight { gx = a.gx, gy = a.gy, dir = a.dir, weight = a.weight });

@@ -23,7 +23,7 @@ namespace Signal.Core
     /// </summary>
     public static class Worlds
     {
-        public static IReadOnlyList<WorldDef> All { get; } = new List<WorldDef> { World1(), World2() };
+        public static IReadOnlyList<WorldDef> All { get; } = new List<WorldDef> { World1(), World2(), World3() };
 
         public static PuzzleDef Find(string id)
         {
@@ -359,6 +359,127 @@ namespace Signal.Core
                     objectives = { Avg(12f) },
                     answer = { new EditOp { kind = EditKind.Roundabout, node = EditorDoc.JunctionId(2, 1) },
                                new EditOp { kind = EditKind.Roundabout, node = EditorDoc.JunctionId(3, 1) } },
+                });
+            }
+
+            foreach (var p in w.puzzles) p.level.name = p.title;
+            return w;
+        }
+
+        // ------------------------------------------------------------ World 3: real roads
+        // Situations lifted from real streets. Calibrated with --search like World 2.
+
+        static WorldDef World3()
+        {
+            var w = new WorldDef
+            {
+                id = "w3", title = "Real roads", unlockStars = 24,
+                blurb = "Situations you have sat in. A diamond interchange, frontage roads, a stadium letting out. Bigger maps, more tools, and the queue that matters is not always the one you can see."
+            };
+
+            // 1. The diamond interchange: an arterial passes under a highway; two ramp
+            //    terminals a block apart; cross streets at either end.
+            {
+                var doc = new EditorDoc { name = "interchange", spacing = 200f, duration = 600f, cols = 5, rows = 5 };
+                for (int gy = 1; gy <= 4; gy++) doc.AddJunction(2, gy);
+                for (int gy = 1; gy < 4; gy++) doc.Connect(2, gy, 2, gy + 1);
+                var n = doc.JunctionAt(2, 1); n.openN = true; n.openE = true; n.openW = true;
+                var t1 = doc.JunctionAt(2, 2); t1.openE = true; t1.modeE = 1; t1.openW = true; t1.modeW = 2;   // off-ramp from the east, on-ramp to the west
+                var t2 = doc.JunctionAt(2, 3); t2.openW = true; t2.modeW = 1; t2.openE = true; t2.modeE = 2;   // off-ramp from the west, on-ramp to the east
+                var sj = doc.JunctionAt(2, 4); sj.openS = true; sj.openE = true; sj.openW = true;
+                foreach (var j in doc.junctions) { j.control = ControlType.TwoWayStop; j.majorAxis = 1; }   // the main road keeps priority everywhere
+                doc.demand = new DemandSpec { preset = "north-south", total = 20f, rush = true };
+                doc.demand.Weigh(2, 2, 1, 5f).Weigh(2, 3, 3, 5f).Weigh(2, 2, 3, 2.5f).Weigh(2, 3, 1, 2.5f)
+                          .Weigh(2, 1, 1, 0.4f).Weigh(2, 1, 3, 0.4f).Weigh(2, 4, 1, 0.4f).Weigh(2, 4, 3, 0.4f);
+                w.puzzles.Add(new PuzzleDef
+                {
+                    id = "w3-1", title = "The interchange",
+                    intro = "A main road passes under the highway. Two off-ramps dump commuters onto it a block apart, two on-ramps take them away, and the cross streets at each end want their turn. The main road keeps priority at every junction. When the evening peak hits, watch the ramps: a queue that backs up an off-ramp is standing on the highway.",
+                    hint = "The off-ramp queue is the one that matters, and it is the one you can't see. At the ramp terminals the ramp has to be the street that keeps priority, or get its own green.",
+                    level = doc.BuildRaw(),
+                    toolbox = { Tools.AllWayStop(), Tools.TwoWayStop(), Tools.Signal(), Tools.Roundabout(), Tools.TurnBay(), Tools.NoLeft(), Tools.TimedPlan() },
+                    budget = 120, par = 16,
+                    objectives = { new ObjectiveDef { kind = ObjectiveKind.GateQueue, value = 6 }, Avg(30f), Max(160f) },
+                    answer = { new EditOp { kind = EditKind.SetControl, node = EditorDoc.JunctionId(2, 2), control = ControlType.TwoWayStop, majorAxis = 0 },
+                               new EditOp { kind = EditKind.SetControl, node = EditorDoc.JunctionId(2, 3), control = ControlType.TwoWayStop, majorAxis = 0 } },
+                });
+            }
+
+            // 2. Frontage roads: one-way pair either side of the highway, cross streets
+            //    bridging, ramps feeding each frontage road at its upstream end.
+            {
+                var doc = new EditorDoc { name = "frontage", spacing = 200f, duration = 600f, cols = 6, rows = 4 };
+                for (int gx = 1; gx <= 4; gx++) { doc.AddJunction(gx, 1); doc.AddJunction(gx, 2); }
+                for (int gx = 1; gx < 4; gx++) { doc.Connect(gx, 1, gx + 1, 1); doc.Connect(gx, 2, gx + 1, 2); }
+                foreach (var st in doc.streets)
+                {
+                    if (st.ay == 1 && st.by == 1) st.ba = false;   // row 1 eastbound only
+                    if (st.ay == 2 && st.by == 2) st.ab = false;   // row 2 westbound only
+                }
+                doc.Connect(1, 1, 1, 2); doc.Connect(4, 1, 4, 2);   // bridges at the ends
+                doc.JunctionAt(1, 1).openW = true; doc.JunctionAt(1, 1).modeW = 1;   // ramp onto the eastbound frontage
+                doc.JunctionAt(4, 1).openE = true; doc.JunctionAt(4, 1).modeE = 2;   // eastbound leaves
+                doc.JunctionAt(4, 2).openE = true; doc.JunctionAt(4, 2).modeE = 1;   // ramp onto the westbound frontage
+                doc.JunctionAt(1, 2).openW = true; doc.JunctionAt(1, 2).modeW = 2;   // westbound leaves
+                for (int gx = 1; gx <= 4; gx++) { doc.JunctionAt(gx, 1).openN = true; doc.JunctionAt(gx, 2).openS = true; }
+                foreach (var j in doc.junctions) j.control = ControlType.AllWayStop;
+                doc.demand = new DemandSpec { preset = "east-west", total = 27f };
+                doc.demand.Weigh(1, 1, 3, 4f).Weigh(4, 2, 1, 4f).Weigh(4, 1, 1, 3f).Weigh(1, 2, 3, 3f)
+                          .Weigh(3, 1, 0, 4f).Weigh(3, 2, 2, 4f).Weigh(2, 1, 0, 0.3f).Weigh(2, 2, 2, 0.3f);
+                var p = new PuzzleDef
+                {
+                    id = "w3-2", title = "Frontage roads",
+                    intro = "Two one-way frontage roads run either side of the highway, fed by ramps at their upstream ends, with local streets crossing between them. Eight all-way stops. Traffic mostly wants to go straight along the frontage roads; the locals want across.",
+                    hint = "One-way roads have no opposing traffic, which makes one control type much better value than usual. Bridges at the ends carry the U-turn traffic.",
+                    level = doc.BuildRaw(),
+                    toolbox = { Tools.AllWayStop(), Tools.TwoWayStop(), Tools.Signal(), Tools.NoLeft() },
+                    budget = 70, par = 56,
+                    objectives = { Avg(19f), Max(155f) },
+                };
+                foreach (var j in doc.junctions)
+                    if (!(j.gx == 4 && j.gy == 2))
+                        p.answer.Add(new EditOp { kind = EditKind.SetControl, node = EditorDoc.JunctionId(j.gx, j.gy), control = ControlType.TwoWayStop, majorAxis = 0 });
+                w.puzzles.Add(p);
+            }
+
+            // 3. The stadium letting out: one entrance floods a quiet grid.
+            {
+                var doc = Row(3, spacing: 200f, preset: "balanced", total: 19f);
+                doc.duration = 600f; doc.demand.rush = true;
+                doc.JunctionAt(2, 1).modeS = 1;                                   // the car park exit: entry only
+                doc.demand.Weigh(2, 1, 2, 12f).Weigh(1, 1, 3, 2f).Weigh(3, 1, 1, 2f).Weigh(2, 1, 0, 0.2f);
+                foreach (var j in doc.junctions) j.control = ControlType.AllWayStop;
+                w.puzzles.Add(new PuzzleDef
+                {
+                    id = "w3-3", title = "Full time",
+                    intro = "The match ends and the car park empties onto the middle junction of a quiet street. Most of them head for the ends of the road. Nothing else is going on, until it is.",
+                    hint = "An all-way stop serves the car park one car at a time. Something has to let the platoon out, without stranding the road it lands on.",
+                    level = doc.BuildRaw(),
+                    toolbox = { Tools.AllWayStop(), Tools.TwoWayStop(), Tools.Signal(), Tools.Roundabout(), Tools.NoLeft() },
+                    budget = 60, par = 24,
+                    objectives = { new ObjectiveDef { kind = ObjectiveKind.GateQueue, value = 10 }, Avg(30f) },
+                    answer = { new EditOp { kind = EditKind.SetControl, node = EditorDoc.JunctionId(1, 1), control = ControlType.TwoWayStop, majorAxis = 0 },
+                               new EditOp { kind = EditKind.SetControl, node = EditorDoc.JunctionId(2, 1), control = ControlType.TwoWayStop, majorAxis = 1 },
+                               new EditOp { kind = EditKind.SetControl, node = EditorDoc.JunctionId(3, 1), control = ControlType.TwoWayStop, majorAxis = 0 } },
+                });
+            }
+
+            // 4. Right in, right out: side-street lefts across an arterial; ban them and the block carries the detour.
+            {
+                var doc = Block(preset: "balanced", total: 26f);
+                doc.demand.Weigh(2, 1, 3, 4f).Weigh(3, 1, 1, 4f).Weigh(2, 2, 3, 0.5f).Weigh(3, 2, 1, 0.5f);
+                foreach (var j in doc.junctions) { j.control = ControlType.TwoWayStop; j.majorAxis = 0; }
+                w.puzzles.Add(new PuzzleDef
+                {
+                    id = "w3-4", title = "Right in, right out",
+                    intro = "The top street is the arterial and keeps priority at both corners. Drivers coming off the side streets want to turn left across it, and each one sits at the stop line waiting for a gap that the arterial rarely offers. Everyone behind them waits too.",
+                    hint = "You can't buy a gap. You can ban the turn: a driver who can't turn left goes right, round the block, and arrives from the other side. Cheap, if the block can take it.",
+                    level = doc.BuildRaw(),
+                    toolbox = { Tools.NoLeft(), Tools.TwoWayStop(), Tools.AllWayStop(), Tools.Signal() },
+                    budget = 40, par = 10,
+                    objectives = { Avg(12f), Max(70f) },
+                    answer = { new EditOp { kind = EditKind.TurnBan, link = EditorDoc.StreetLinkId(2, 2, 0), turns = TurnMask.Through | TurnMask.Right },
+                               new EditOp { kind = EditKind.TurnBan, link = EditorDoc.StreetLinkId(3, 1, 3), turns = TurnMask.Through | TurnMask.Right } },
                 });
             }
 

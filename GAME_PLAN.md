@@ -303,6 +303,35 @@ callout on the first puzzle of each world until the first change; signal bars
 carry state as shape too (solid = go, thin = clearing, broken = stop); a disc
 under each junction so bars don't tangle.
 
+*World 3 "Real roads" (2026-09-13):* situations lifted from real streets,
+built in the editor model with two additions: one-way arms (entry-only for an
+off-ramp, exit-only for an on-ramp) and a gate-queue metric/objective ("never
+more than N cars backed up at an entrance": the off-ramp queue standing on the
+highway, or the car park failing to empty). Shipped: the diamond interchange
+(main road keeps priority everywhere as given; the fix is to give the ramps
+priority at the two terminals, $16), frontage roads (one-way pair, ramps at the
+upstream ends, a busy cross street; two-way stops nearly everywhere and one
+corner left alone), full time (a car park empties onto a quiet street: the car
+park junction wants the opposite priority to its neighbours), and right in
+right out (ban one specific side-street left across the arterial, $5, and the
+block carries the detour; most other bans fail the fairness goal). Search
+now handles more than five junctions by coordinate descent.
+
+*Brainstorm, not yet built (each maps to sim primitives that exist):*
+- **School run / shift change**: a tidal rush that reverses halfway (needs
+  per-direction rate curves; `Rush()` is symmetric today).
+- **The bridge**: a single two-lane link every route must use (bottleneck, a
+  spillback goal, timed plans that meter the approaches).
+- **Bus lane / priority street**: an arm with a fixed flow that must keep a
+  max-wait goal while the rest of the map is saturated.
+- **Roadworks**: a street closed mid-round (needs a time-varying network; not
+  supported).
+- **The bypass**: a town main street versus a ring road; one-way and no-left
+  tools decide where the through traffic goes.
+- **Ten-by-twenty district**: a large map as context with a small editable
+  set (needs an editable-junction list on PuzzleDef; the sim and renderer are
+  fine at that size, the search is not, so goals would come from descent).
+
 **P4 — Progression and polish** (2–3 weeks)
 Worlds and star gates, a tutorial that is just World 1 with more text, hints,
 a replay of the run, sound and juice, settings, and the accessibility pass (the
