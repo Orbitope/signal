@@ -33,6 +33,15 @@ namespace SignalGodot
 
         public static int StarsFor(string puzzleId) => Stars.TryGetValue(puzzleId, out var s) ? s : 0;
 
+        public static int TotalStars()
+        {
+            int n = 0;
+            foreach (var w in Signal.Core.Worlds.All) foreach (var p in w.puzzles) n += StarsFor(p.id);
+            return n;
+        }
+
+        public static bool Unlocked(Signal.Core.WorldDef w) => TotalStars() >= w.unlockStars;
+
         /// <summary>Record a result; only ever improves.</summary>
         public static bool Record(string puzzleId, int stars)
         {

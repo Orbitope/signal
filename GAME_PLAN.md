@@ -273,8 +273,18 @@ levels, and a composite "all-training" brain (World 1 junctions + editor
 shapes + grid3, 30 agents) was still improving when its 600k steps ended and
 lost to aging MaxPressure on every World 2 shape (block: 54 s vs 17 s). So the
 shipped game runs the World 1 brain on a lone junction and aging MaxPressure
-on anything larger. A 2.4M-step run of the composite is in flight
-(`training/train_all_long.sh`); swap it in only if the table says it wins.
+on anything larger. A 2.4M-step run of the composite (`shared-all-v4-long-s0`) finished with a
+noisy, non-monotonic curve and a split verdict: it beat aging MaxPressure on
+the short block and the roundabout pair, lost badly on the 2x2 block (46 s vs
+17 s) and slightly on the plain pair. Not a clean win, so MaxPressure stays.
+Next lever, if a network brain matters for World 3: a fairness term in the
+reward (the pressure reward is what starves side streets) and per-shape
+curricula rather than one composite level.
+
+*P4 so far (2026-09-13):* World 2 unlocks at 9 total stars; a tutorial
+callout on the first puzzle of each world until the first change; signal bars
+carry state as shape too (solid = go, thin = clearing, broken = stop); a disc
+under each junction so bars don't tangle.
 
 **P4 — Progression and polish** (2–3 weeks)
 Worlds and star gates, a tutorial that is just World 1 with more text, hints,

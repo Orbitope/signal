@@ -30,7 +30,8 @@ namespace SignalGodot
         private int _fails;
         private bool _showHint, _built;
 
-        private Label _title, _sub, _intro, _hintLabel, _budget, _error, _status, _verdict;
+        private Label _title, _sub, _intro, _hintLabel, _budget, _error, _status, _verdict, _tutorial;
+        private PanelContainer _tutorialBox;
         private VBoxContainer _objRows, _opsRows;
         private HBoxContainer _buildButtons, _runButtons, _doneButtons;
         private Button _run, _reveal;
@@ -189,6 +190,12 @@ namespace SignalGodot
             _hintLabel = Ui.Label("", Ui.Body, Orbitope.AmberBright, null, wrap: true, width: WrapWidth);
             _hintLabel.Visible = false;
             col.AddChild(_title); col.AddChild(_sub); col.AddChild(_intro); col.AddChild(_hintLabel);
+            _tutorialBox = new PanelContainer();
+            _tutorialBox.AddThemeStyleboxOverride("panel", Ui.Flat(Orbitope.Amber with { A = 0.16f }, Orbitope.Amber, 12, 10));
+            _tutorial = Ui.Label("", Ui.Body, Orbitope.AmberBright, null, wrap: true, width: WrapWidth - 24);
+            _tutorialBox.AddChild(_tutorial);
+            _tutorialBox.Visible = false;
+            col.AddChild(_tutorialBox);
             col.AddChild(Ui.Separator());
 
             col.AddChild(Ui.Label("GOALS", Ui.Small, Orbitope.TextMuted, Orbitope.Rajdhani));
@@ -256,6 +263,10 @@ namespace SignalGodot
             if (_p == null) return;
             _hintLabel.Visible = _showHint;
             _hintLabel.Text = "Hint: " + _p.hint;
+            // Tutorial callout: until the player makes a change (or has already cleared this puzzle).
+            bool untouched = _sol.Ops.Count == _p.initialOps.Count && _sol.Ops.TrueForAll(o => _p.initialOps.Exists(i => i.SameAs(o)));
+            _tutorialBox.Visible = _state == State.Build && !string.IsNullOrEmpty(_p.tutorial) && untouched && Progress.StarsFor(_p.id) == 0;
+            _tutorial.Text = _p.tutorial;
 
             foreach (var c in _objRows.GetChildren()) c.QueueFree();
             _objLabels.Clear();

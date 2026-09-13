@@ -134,6 +134,7 @@ namespace Signal.Core
         public string title = "";
         public string intro = "";
         public string hint = "";
+        public string tutorial = "";          // shown in the build phase until the first change (first puzzles only)
         public LevelDef level;
         public List<EditOp> initialOps = new List<EditOp>();   // pre-placed; removing one is free
         public List<ToolDef> toolbox = new List<ToolDef>();
@@ -158,6 +159,7 @@ namespace Signal.Core
         public string id = "";
         public string title = "";
         public string blurb = "";
+        public int unlockStars = 0;           // total stars needed (across earlier worlds) to open this world
         public List<PuzzleDef> puzzles = new List<PuzzleDef>();
     }
 

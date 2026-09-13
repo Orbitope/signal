@@ -250,8 +250,16 @@ namespace SignalGodot
             if (SelectedPoint.HasValue)
                 DrawArc(SelectedPoint.Value, Legible(24f * PixelsPerMeter, 30f), 0f, Mathf.Tau, 48, Highlight, Legible(2f, 3f));
 
-            // Controls at every junction.
+            // Controls at every junction. A dark disc under a junction keeps the
+            // bars from tangling in the middle; signal state is colour AND
+            // shape (solid = go, broken = stop, thin = clearing) for
+            // colour-blind players.
             float half = Legible(2.4f * PixelsPerMeter, 13f), back = Legible(2f * PixelsPerMeter, 8f), barW = Legible(1.6f * PixelsPerMeter, 6f);
+            foreach (var node in net.Nodes)
+            {
+                if (node.IsBoundary || node.InLinks.Count < 3) continue;
+                DrawCircle(ToWorld(node.X, node.Y), Legible(3.2f * PixelsPerMeter, 10f), RoadEdge);
+            }
             foreach (var node in net.Nodes)
             {
                 if (node.IsBoundary) continue;
@@ -265,10 +273,16 @@ namespace SignalGodot
                             var dir = (b - a).Normalized();
                             var right = new Vector2(-dir.Y, dir.X);
                             var barCenter = b - dir * back;
-                            Color c = RedBar;
-                            if (MovementServedFrom(node, ctl, inId))
-                                c = ctl.State == SignalState.Green ? GreenBar : ctl.State == SignalState.Yellow ? YellowBar : RedBar;
-                            DrawLine(barCenter - right * half, barCenter + right * half, c, barW);
+                            bool served = MovementServedFrom(node, ctl, inId);
+                            if (served && ctl.State == SignalState.Green)
+                                DrawLine(barCenter - right * half, barCenter + right * half, GreenBar, barW);
+                            else if (served && ctl.State == SignalState.Yellow)
+                                DrawLine(barCenter - right * half, barCenter + right * half, YellowBar, barW * 0.55f);
+                            else
+                            {   // red: a broken bar
+                                DrawLine(barCenter - right * half, barCenter - right * half * 0.25f, RedBar, barW);
+                                DrawLine(barCenter + right * half * 0.25f, barCenter + right * half, RedBar, barW);
+                            }
                         }
                         if (Runner.IsOverriding(node.Id))
                             DrawArc(ToWorld(node.X, node.Y), Legible(9f * PixelsPerMeter, 14f),

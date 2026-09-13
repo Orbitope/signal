@@ -114,6 +114,7 @@ namespace Signal.Core
             {
                 id = "w1-1", title = "Quiet crossroads",
                 intro = "A sleepy junction with a full traffic signal. Cars sit at red with nobody coming the other way. Find something cheaper that keeps them moving.",
+                tutorial = "How to play: click the junction on the map, pick a tool from the list, then press Run. The AI drives the lights; you decide what gets built. Every goal has to hold on three separate runs.",
                 hint = "When traffic is light, stopping briefly beats waiting for a light to change.",
                 level = FourWay("Quiet crossroads", ControlType.Signalized, Balanced(8f)),
                 toolbox = { Tools.AllWayStop(), Tools.TwoWayStop(), Tools.Signal() },
@@ -228,8 +229,8 @@ namespace Signal.Core
         {
             var w = new WorldDef
             {
-                id = "w2", title = "Two lights",
-                blurb = "Junctions that affect each other. A queue at one light backs into the next, a one-way pair makes a green wave, and the AI has to share the road."
+                id = "w2", title = "Two lights", unlockStars = 9,
+                blurb = "Junctions that affect each other. A queue at one light backs into the next, and the AI has to share the road."
             };
 
             // 1. Two junctions on a busy road with all-way stops.
@@ -240,6 +241,7 @@ namespace Signal.Core
                 {
                     id = "w2-1", title = "Two in a row",
                     intro = "A busy road crosses two quiet streets a block apart, and someone put an all-way stop at both. The main road stops twice for nobody.",
+                    tutorial = "Two junctions now. Each one is clicked and changed on its own, and the price adds up.",
                     hint = "The main road should keep priority at both junctions.",
                     level = doc.BuildRaw(),
                     toolbox = { Tools.AllWayStop(), Tools.TwoWayStop(), Tools.Signal() },

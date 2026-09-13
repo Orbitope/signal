@@ -73,11 +73,20 @@ namespace SignalGodot
         {
             foreach (var c in _puzzleRows.GetChildren()) c.QueueFree();
             bool first = true;
+            int total = Progress.TotalStars();
+            _puzzleRows.AddChild(Ui.Label($"{total} stars so far", Ui.Body, Orbitope.TextSecondary));
             foreach (var world in Worlds.All)
             {
                 if (!first) _puzzleRows.AddChild(Ui.Separator());
                 first = false;
-                _puzzleRows.AddChild(Ui.Label(world.title.ToUpperInvariant(), Ui.Heading, Orbitope.AmberBright, Orbitope.Rajdhani));
+                bool open = Progress.Unlocked(world);
+                _puzzleRows.AddChild(Ui.Label(world.title.ToUpperInvariant(), Ui.Heading, open ? Orbitope.AmberBright : Orbitope.TextMuted, Orbitope.Rajdhani));
+                if (!open)
+                {
+                    _puzzleRows.AddChild(Ui.Label($"Locked. Earn {world.unlockStars - total} more star{(world.unlockStars - total == 1 ? "" : "s")} in the worlds above to open it ({world.puzzles.Count} puzzles).",
+                                                  Ui.Body, Orbitope.TextSecondary, null, wrap: true, width: 700));
+                    continue;
+                }
                 _puzzleRows.AddChild(Ui.Label(world.blurb, Ui.Small, Orbitope.TextSecondary, null, wrap: true, width: 700));
                 AddRows(world.puzzles, world.title);
             }
