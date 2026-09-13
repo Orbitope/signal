@@ -18,3 +18,4 @@ UnityReference/
 
 # macOS
 .DS_Store
+build/

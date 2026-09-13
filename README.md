@@ -20,7 +20,9 @@ signal to twenty-five, the same 62-thousand-parameter model unchanged.
   `RESULTS.md` has the measured numbers.
 - `docs/` — the article at `orbitope.com/signal/`, a single self-contained HTML
   file with the figures inlined.
-- `godot/` — early game prototype.
+- `godot/` — the game (Godot 4.7.1 .NET): World 1 and World 2 puzzles, a
+  sandbox where you drive the lights against the AI, and a level editor that
+  exports puzzles. See `godot/README.md`; the roadmap is `GAME_PLAN.md`.
 - `tools/` — network and figure renderers.
 
 ## Reproduce

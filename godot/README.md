@@ -52,6 +52,20 @@ does). If a file is missing the light-runner falls back to the same stand-in.
 next to a `.bin` is the fixture `Signal.Tests` uses to prove the C# forward
 pass matches PyTorch.
 
+## Desktop build
+
+`export_presets.cfg` has a macOS preset (universal, unsigned, includes
+`policies/*.bin`). With the 4.7.1 mono export templates installed:
+
+```
+godot --headless --path . --export-release "macOS" ../build/Signal.app
+```
+
+The exporter needs `Signal.Godot.sln` (committed) and the project setting
+`textures/vram_compression/import_etc2_astc=true` (set). The exported app
+accepts the same `--` args as the editor run, so a screenshot from the built
+binary is one command. Unsigned: first launch needs right-click → Open.
+
 ## Dev hooks (no display needed)
 
 ```

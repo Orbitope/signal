@@ -294,6 +294,10 @@ need a second channel).
 
 **P5 — Ship**
 Platform decision (section 9), store page, a playtest round, then release.
+*Status:* a macOS export works headless (`export_presets.cfg`, unsigned
+universal .app, 322 MB with the .NET runtime) and the built binary runs the
+game with the trained policy. Not done: signing/notarization, Windows and
+Linux presets (same recipe, need their templates), an icon, a playtest.
 
 ## 9. The platform problem
 
