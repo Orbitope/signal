@@ -483,8 +483,49 @@ namespace Signal.Core
                 });
             }
 
+            // 5. The district: a big grid as context, four corners to fix.
+            {
+                var doc = GridDoc(8, 5, 160f, "east-west", 32f);
+                foreach (var j in doc.junctions) { j.control = ControlType.TwoWayStop; j.majorAxis = 1; }   // side streets keep priority everywhere
+                // The arterial is row 3: its ends carry the district's through traffic, and it
+                // already has priority except at the four corners in the middle.
+                foreach (var j in doc.junctions) if (j.gy == 3 && (j.gx <= 2 || j.gx >= 7)) j.majorAxis = 0;
+                doc.demand.Weigh(1, 3, 3, 20f).Weigh(8, 3, 1, 20f);
+                doc.demand.Weigh(5, 1, 0, 5f).Weigh(5, 5, 2, 5f);      // one busy cross street, through the middle
+                for (int gx = 1; gx <= 8; gx++) if (gx != 5) { doc.demand.Weigh(gx, 1, 0, 0.4f); doc.demand.Weigh(gx, 5, 2, 0.4f); }
+                var p = new PuzzleDef
+                {
+                    id = "w3-5", title = "The district",
+                    intro = "Forty junctions, and a main road running east-west through the middle. Somewhere in the centre it loses its priority. You may change the four ringed junctions and nothing else, and you don't need all of them.",
+                    hint = "The ringed corners sit on the main road. What does the main road need at a corner, and what do its side streets need?",
+                    level = doc.BuildRaw(),
+                    toolbox = { Tools.AllWayStop(), Tools.TwoWayStop(), Tools.Signal(), Tools.NoLeft() },
+                    budget = 60, par = 24,
+                    objectives = { Avg(20f), Max(145f) },
+                };
+                foreach (int gx in new[] { 3, 4, 5, 6 }) p.editable.Add(EditorDoc.JunctionId(gx, 3));
+                foreach (int gx in new[] { 4, 5, 6 })
+                    p.answer.Add(new EditOp { kind = EditKind.SetControl, node = EditorDoc.JunctionId(gx, 3), control = ControlType.TwoWayStop, majorAxis = 0 });
+                w.puzzles.Add(p);
+            }
+
             foreach (var p in w.puzzles) p.level.name = p.title;
             return w;
+        }
+
+        /// <summary>A full grid of junctions, every outer arm open.</summary>
+        public static EditorDoc GridDoc(int cols, int rows, float spacing, string preset, float total)
+        {
+            var doc = new EditorDoc { name = "grid", spacing = spacing, cols = cols + 2, rows = rows + 2 };
+            for (int gx = 1; gx <= cols; gx++) for (int gy = 1; gy <= rows; gy++) doc.AddJunction(gx, gy);
+            for (int gx = 1; gx <= cols; gx++) for (int gy = 1; gy <= rows; gy++)
+            {
+                if (gx < cols) doc.Connect(gx, gy, gx + 1, gy);
+                if (gy < rows) doc.Connect(gx, gy, gx, gy + 1);
+            }
+            OpenAllFreeArms(doc);
+            doc.demand = new DemandSpec { preset = preset, total = total };
+            return doc;
         }
 
         /// <summary>Two junctions side by side on row 1, every outer arm open.</summary>

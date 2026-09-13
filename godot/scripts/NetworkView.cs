@@ -31,6 +31,8 @@ namespace SignalGodot
 
         /// <summary>Selection highlight (puzzle editing). -1 = none.</summary>
         public int SelectedNode = -1, SelectedLink = -1;
+        /// <summary>Puzzle: only these junction ids may be edited (null = all). Others are drawn dimmed.</summary>
+        public System.Collections.Generic.HashSet<int> EditableSet;
         /// <summary>Extra highlight point (e.g. a roundabout's original centre).</summary>
         public Vector2? SelectedPoint;
 
@@ -261,6 +263,8 @@ namespace SignalGodot
             {
                 if (!Junctions.IsEditable(node)) continue;
                 DrawCircle(ToWorld(node.X, node.Y), Legible(3.2f * PixelsPerMeter, 10f), RoadEdge);
+                if (EditableSet != null && EditableSet.Contains(node.Id))
+                    DrawArc(ToWorld(node.X, node.Y), Legible(9f * PixelsPerMeter, 20f), 0f, Mathf.Tau, 40, Orbitope.Amber with { A = 0.75f }, Legible(1.2f, 2.5f));
             }
             foreach (var node in net.Nodes)
             {
@@ -378,7 +382,7 @@ namespace SignalGodot
             float best = Legible(14f * PixelsPerMeter, 28f);
             foreach (var node in Runner.Sim.Network.Nodes)
             {
-                if (!IsEditable(node)) continue;
+                if (!IsEditable(node) || (EditableSet != null && !EditableSet.Contains(node.Id))) continue;
                 float d = worldPos.DistanceTo(ToWorld(node.X, node.Y));
                 if (d < best) { best = d; nodeId = node.Id; }
             }
@@ -393,7 +397,7 @@ namespace SignalGodot
             var net = Runner.Sim.Network;
             foreach (var link in net.Links)
             {
-                if (!IsEditable(net.NodeById(link.To))) continue;
+                if (!IsEditable(net.NodeById(link.To)) || (EditableSet != null && !EditableSet.Contains(link.To))) continue;
                 var (a, b) = LinkLine(link);
                 float d = DistToSegment(worldPos, a, b);
                 if (d < best) { best = d; linkId = link.Id; }

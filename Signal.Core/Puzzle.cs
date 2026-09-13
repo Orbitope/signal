@@ -146,6 +146,16 @@ namespace Signal.Core
         public List<int> seeds = new List<int> { 1, 2, 3 };
         public List<ObjectiveDef> objectives = new List<ObjectiveDef>();
         public float aiDecisionInterval = 5f;
+        /// <summary>Junction ids the player may change (empty = every junction).
+        /// Lets a big map be context while the puzzle is a handful of corners.</summary>
+        public List<int> editable = new List<int>();
+
+        public bool CanEdit(int nodeId) => editable.Count == 0 || editable.Contains(nodeId);
+        public bool CanEditLink(LevelDef lv, int linkId)
+        {
+            var l = lv.network.links.Find(x => x.id == linkId);
+            return l != null && CanEdit(l.to);
+        }
         /// <summary>The authored answer (full op list, not a diff). Tests verify it
         /// solves under the current sim; the game can reveal it.</summary>
         public List<EditOp> answer = new List<EditOp>();
@@ -224,6 +234,8 @@ namespace Signal.Core
                 if (puzzle.initialOps.Exists(i => i.SameAs(op))) continue;
                 var tool = puzzle.ToolFor(op)
                            ?? throw new PuzzleException($"{op.kind} is not in this puzzle's toolbox");
+                if (op.node >= 0 && !puzzle.CanEdit(op.node)) throw new PuzzleException("that junction is not yours to change in this puzzle");
+                if (op.link >= 0 && !puzzle.CanEditLink(puzzle.level, op.link)) throw new PuzzleException("that street is not yours to change in this puzzle");
                 cost += tool.price;
             }
             return cost;

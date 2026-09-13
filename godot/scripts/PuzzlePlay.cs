@@ -49,6 +49,7 @@ namespace SignalGodot
             _state = State.Build;
             App.Runner.FinishedRound += OnFinishedRound;
             App.Net.ShowCompass = true;
+            App.Net.EditableSet = p.editable.Count == 0 ? null : new HashSet<int>(p.editable);
             _title.Text = p.title.ToUpperInvariant();
             _sub.Text = $"{setTitle} · puzzle {IndexOf(p) + 1} of {set.Count}";
             _intro.Text = p.intro;
@@ -62,6 +63,7 @@ namespace SignalGodot
         {
             App.Runner.FinishedRound -= OnFinishedRound;
             App.Runner.TimeScale = 0f;
+            App.Net.EditableSet = null;
             _popup.Close();
             SetProcessUnhandledInput(false);
         }

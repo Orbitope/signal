@@ -106,7 +106,7 @@ namespace Signal.Core
             if (puzzle.answer != null) list.Add(("AUTHORED ANSWER", new List<EditOp>(puzzle.answer)));
 
             // Multi-junction levels: also try the same control on every junction at once.
-            var junctions = lv.network.nodes.FindAll(n => Junctions.IsEditable(lv.network, n));
+            var junctions = lv.network.nodes.FindAll(n => Junctions.IsEditable(lv.network, n) && puzzle.CanEdit(n.id));
             if (junctions.Count > 1)
                 foreach (var tool in puzzle.toolbox)
                 {
@@ -134,7 +134,7 @@ namespace Signal.Core
                     case EditKind.Retime:
                         foreach (var nd in lv.network.nodes)
                         {
-                            if (!Junctions.IsEditable(lv.network, nd)) continue;
+                            if (!Junctions.IsEditable(lv.network, nd) || !puzzle.CanEdit(nd.id)) continue;
                             if (tool.kind == EditKind.SetControl && (tool.control == ControlType.TwoWayStop || tool.control == ControlType.YieldEntry))
                             {
                                 for (int axis = 0; axis < 2; axis++)
@@ -158,7 +158,7 @@ namespace Signal.Core
                         if (tool.kind == EditKind.OneWay || tool.kind == EditKind.TurnBan)
                         {
                             // Streets between junctions, as pairs (a one-way pair, both lefts banned).
-                            var inner = lv.network.links.FindAll(l => junctions.Exists(n => n.id == l.from) && junctions.Exists(n => n.id == l.to));
+                            var inner = lv.network.links.FindAll(l => junctions.Exists(n => n.id == l.from) && junctions.Exists(n => n.id == l.to) && puzzle.CanEdit(l.to));
                             for (int a = 0; a < inner.Count && inner.Count <= 12; a++)
                             for (int b = a + 1; b < inner.Count; b++)
                             {
@@ -190,7 +190,7 @@ namespace Signal.Core
                         foreach (var l in lv.network.links)
                         {
                             var to = lv.network.nodes.Find(n => n.id == l.to);
-                            if (to == null || to.isBoundary) continue;
+                            if (to == null || to.isBoundary || !puzzle.CanEdit(l.to)) continue;
                             var op = new EditOp { kind = tool.kind, link = l.id };
                             if (tool.kind == EditKind.TurnBan) op.turns = TurnMask.Through | TurnMask.Right;
                             var ops = new List<EditOp>(initial); ops.Add(op);
@@ -210,7 +210,7 @@ namespace Signal.Core
         {
             var list = new List<(string, List<EditOp>)>();
             var lv = puzzle.level;
-            var junctions = lv.network.nodes.FindAll(n => Junctions.IsEditable(lv.network, n));
+            var junctions = lv.network.nodes.FindAll(n => Junctions.IsEditable(lv.network, n) && puzzle.CanEdit(n.id));
             if (junctions.Count == 0) return list;
             var options = new List<(string tag, Func<int, EditOp> make)> { ("keep", _ => null) };
             foreach (var t in puzzle.toolbox)
