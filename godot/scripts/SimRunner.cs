@@ -54,17 +54,18 @@ namespace SignalGodot
             _tap.Clear();
 
             Sim = new SimCore(level, seed);
+            var ai = GameAi.FactoryFor(Sim);
             if (_ops != null) Edits.AttachPolicies(Sim, _ops, DecisionInterval);
             else
                 foreach (var node in Sim.Network.Nodes)
                     if (node.Control is SignalController ctl)
-                    { ctl.Policy = new AgingMaxPressurePolicy(); ctl.DecisionInterval = DecisionInterval; }
+                    { ctl.Policy = ai(ctl); ctl.DecisionInterval = DecisionInterval; }
 
             if (_withTaps)
                 foreach (var node in Sim.Network.Nodes)
                     if (node.Control is SignalController ctl && !(ctl.Policy is FixedTimePolicy))
                     {
-                        var p = new TapOverridePolicy();
+                        var p = new TapOverridePolicy(ctl.Policy);
                         _tap[node.Id] = p;
                         ctl.Policy = p;
                         ctl.DecisionInterval = DecisionInterval;
@@ -76,7 +77,7 @@ namespace SignalGodot
                 Ghost = new SimCore(level, seed);
                 foreach (var node in Ghost.Network.Nodes)
                     if (node.Control is SignalController ctl)
-                    { ctl.Policy = new AgingMaxPressurePolicy(); ctl.DecisionInterval = DecisionInterval; }
+                    { ctl.Policy = ai(ctl); ctl.DecisionInterval = DecisionInterval; }
             }
 
             Sim.SpillbackStarted += linkId =>
@@ -159,15 +160,7 @@ namespace SignalGodot
         public float OverrideRemaining(int nodeId)
             => Sim != null && _tap.TryGetValue(nodeId, out var t) ? t.Remaining(Sim.Time) : 0f;
 
-        public int SignalCount
-        {
-            get
-            {
-                if (Sim == null) return 0;
-                int n = 0;
-                foreach (var node in Sim.Network.Nodes) if (node.Control is SignalController) n++;
-                return n;
-            }
-        }
+        public int SignalCount => Sim == null ? 0 : GameAi.SignalCount(Sim);
+        public string AiName => Sim == null ? "" : GameAi.NameFor(Sim);
     }
 }

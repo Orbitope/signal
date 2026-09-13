@@ -56,12 +56,41 @@ namespace Signal.Core
                                                   demand = CorridorBuilder.CorridorDemand(5, 3, rush: true) },
                 "corridor7" => new LevelDef { network = CorridorBuilder.Corridor(7, 3),
                                               demand = CorridorBuilder.CorridorDemand(7, 3) },
+                // Training level for the game's World 1 AI: six unconnected
+                // junctions at once (plain four-ways from quiet to saturated, and
+                // two with left-turn bays), so one shared policy sees every
+                // situation a single junction can be in, including "no neighbours".
+                "w1-training" => W1Training(),
                 _ when name.StartsWith("sc-") => Scenarios.Get(name)
                                                  ?? throw new ArgumentException($"unknown scenario '{name}'"),
                 _ => throw new ArgumentException($"unknown level '{name}'")
             };
             if (def.name == "unnamed") def.name = name;
             return def;
+        }
+
+        static LevelDef W1Training()
+        {
+            var parts = new List<(NetworkDef net, DemandDef demand)>
+            {
+                (NetworkBuilder.FourWay(ControlType.Signalized), Worlds.Balanced(8f)),
+                (NetworkBuilder.FourWay(ControlType.Signalized), Worlds.Balanced(16f)),
+                (NetworkBuilder.FourWay(ControlType.Signalized), Worlds.Balanced(26f, left: 0.08f)),
+                (NetworkBuilder.FourWay(ControlType.Signalized), Worlds.DominantDemand(14f, 8f)),
+                (LaneBuilder.FourWayWithBays(), Worlds.LeftHeavyDemand(0.7f)),
+                (LaneBuilder.FourWayWithBays(), Worlds.Mixed(3f, 11f, 3f, 11f)),
+            };
+            var lv = new LevelDef { name = "w1-training", duration = 600f };
+            for (int k = 0; k < parts.Count; k++)
+            {
+                var (net, dem) = parts[k];
+                int off = k * 1000; float dx = k * 600f;
+                foreach (var n in net.nodes) { n.id += off; n.x += dx; lv.network.nodes.Add(n); }
+                foreach (var l in net.links) { l.id += off; l.from += off; l.to += off; lv.network.links.Add(l); }
+                foreach (var f in dem.flows) { f.origin += off; f.dest += off; lv.demand.flows.Add(f); }
+                // Phase movement indices are per node and unaffected by the id offset.
+            }
+            return lv;
         }
     }
 }

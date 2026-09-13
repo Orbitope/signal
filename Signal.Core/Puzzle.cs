@@ -307,9 +307,10 @@ namespace Signal.Core
         public static void AttachPolicies(Simulation sim, IEnumerable<EditOp> ops, float aiInterval = 5f,
                                           Func<SignalController, ISignalPolicy> ai = null)
         {
+            ai ??= GameAi.FactoryFor(sim);
             foreach (var node in sim.Network.Nodes)
                 if (node.Control is SignalController ctl)
-                { ctl.Policy = ai != null ? ai(ctl) : new AgingMaxPressurePolicy(); ctl.DecisionInterval = aiInterval; }
+                { ctl.Policy = ai(ctl); ctl.DecisionInterval = aiInterval; }
             foreach (var op in ops)
             {
                 if (op.kind != EditKind.Retime) continue;

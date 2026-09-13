@@ -14,7 +14,8 @@ namespace SignalGodot
     {
         public float HoldSeconds = 12f;
 
-        private readonly AgingMaxPressurePolicy _auto = new AgingMaxPressurePolicy();
+        private readonly ISignalPolicy _auto;
+        public TapOverridePolicy(ISignalPolicy auto = null) { _auto = auto ?? GameAi.Junction(null); }
         private int _phase = -1;
         private float _until = -1f;
 

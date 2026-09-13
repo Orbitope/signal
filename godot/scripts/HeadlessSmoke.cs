@@ -153,6 +153,21 @@ namespace SignalGodot
                 Check(r.Sim.Metrics.Completed > 0, $"puzzle level runs ({r.Sim.Metrics.Completed} done)");
             }
 
+            // 11) P2: the trained policy loads from res:// and runs the lights.
+            {
+                Main.LoadGameAi();
+                Check(GameAi.NetworkName.StartsWith("trained") && GameAi.JunctionName.StartsWith("trained"),
+                      $"game AI is the trained policy (junction: {GameAi.JunctionName}; network: {GameAi.NetworkName})");
+                var r = new SimRunner();
+                AddChild(r);
+                r.Load(LevelLoader.Load("grid3"), 5);
+                bool learned = true;
+                foreach (var n in r.Sim.Network.Nodes)
+                    if (n.Control is SignalController c && !(c.Policy is TapOverridePolicy)) learned = false;
+                for (int i = 0; i < 600; i++) r._Process(0.1);
+                Check(learned && r.Sim.Metrics.Completed > 0, $"trained policy drives grid3 ({r.Sim.Metrics.Completed} done in 60 s)");
+            }
+
             GD.Print(failures == 0 ? "SMOKE PASSED" : $"{failures} SMOKE FAILURES");
             GetTree().Quit(failures);
         }

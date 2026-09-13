@@ -133,6 +133,8 @@ class Program
                 {
                     "fixed" => ctl => new FixedTimePolicy(20f * ctl.Phases.Count, Edits.NormalizedSplits(null, ctl.Phases.Count)),
                     "greedy" => ctl => new GreedyPolicy(),
+                    "maxpressure" => ctl => new MaxPressurePolicy(),
+                    "learned" => LearnedFactory(opt),
                     _ => null
                 };
             Console.WriteLine($"\n== {p.id}  {p.title}   budget ${p.budget} par ${p.par}   seeds {p.seeds.Count} x {p.level.duration:F0}s");
@@ -148,6 +150,15 @@ class Program
             }
         }
         return 0;
+    }
+
+    /// <summary>--policy learned --weights godot/policies/NAME.bin</summary>
+    static Func<SignalController, ISignalPolicy> LearnedFactory(Dictionary<string, string> opt)
+    {
+        if (!opt.TryGetValue("weights", out var path)) throw new ArgumentException("--policy learned needs --weights PATH.bin");
+        var w = PolicyWeights.FromBytes(File.ReadAllBytes(path));
+        Console.WriteLine($"   learned policy: {path} ({w.Describe()})");
+        return ctl => new LearnedPolicy(w);
     }
 
     static void Attach(Simulation sim, string policy)

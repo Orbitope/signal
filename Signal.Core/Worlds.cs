@@ -55,7 +55,7 @@ namespace Signal.Core
         /// (NetworkBuilder.SymmetricDemand sends a third of all cars left, which
         /// swamps a single-lane junction with permissive lefts long before the
         /// through traffic does.)</summary>
-        static DemandDef Mixed(float fromN, float fromE, float fromS, float fromW, float left = 0.15f, float right = 0.15f)
+        public static DemandDef Mixed(float fromN, float fromE, float fromS, float fromW, float left = 0.15f, float right = 0.15f)
         {
             var d = new DemandDef();
             float thru = 1f - left - right;
@@ -75,7 +75,7 @@ namespace Signal.Core
             if (left > 0f) d.flows.Add(Flow(o, leftTo, total * left));
         }
 
-        static DemandDef Balanced(float total, float left = 0.15f, float right = 0.15f)
+        public static DemandDef Balanced(float total, float left = 0.15f, float right = 0.15f)
             => Mixed(total / 4f, total / 4f, total / 4f, total / 4f, left, right);
 
         /// <summary>Balanced demand whose total follows a curve (rush hour).</summary>
@@ -193,7 +193,7 @@ namespace Signal.Core
                 initialOps = { new EditOp { kind = EditKind.Retime, node = Center, cycle = 60f, splits = new List<float> { 0.15f, 0.85f } } },
                 toolbox = { Tools.TimedPlan(), Tools.Signal() },
                 budget = 20, par = 0,
-                objectives = { Avg(15f), Max(60f) },
+                objectives = { Avg(18f), Max(60f) },
             });
 
             // 8. Rush hour: the off-peak fix fails at the peak.
@@ -215,7 +215,7 @@ namespace Signal.Core
         }
 
         /// <summary>A river north to south on top of a light balanced background.</summary>
-        static DemandDef DominantDemand(float dominant, float backgroundTotal)
+        public static DemandDef DominantDemand(float dominant, float backgroundTotal)
         {
             var d = Balanced(backgroundTotal);
             d.flows.Add(Flow(N, S, dominant));
@@ -224,7 +224,7 @@ namespace Signal.Core
 
         /// <summary>North-south traffic with a heavy share of left turns
         /// (N→E and S→W are lefts for right-hand traffic), light cross traffic.</summary>
-        static DemandDef LeftHeavyDemand(float k)
+        public static DemandDef LeftHeavyDemand(float k)
         {
             var d = new DemandDef();
             d.flows.Add(Flow(N, S, 9f * k)); d.flows.Add(Flow(S, N, 9f * k));

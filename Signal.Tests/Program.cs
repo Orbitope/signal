@@ -321,6 +321,45 @@ class Program
             T.Assert(sps > 10000, $"too slow: {sps:N0} steps/sec");
         });
 
+        Console.WriteLine("== Learned policy port ==");
+        foreach (var fix in System.IO.Directory.GetFiles("../godot/policies", "*.parity.json"))
+        {
+            string tag = System.IO.Path.GetFileName(fix).Replace(".parity.json", "");
+            T.Run($"{tag}: C# actor reproduces PyTorch greedy actions", () =>
+            {
+                var w = PolicyWeights.FromBytes(System.IO.File.ReadAllBytes($"../godot/policies/{tag}.bin"));
+                using var doc = System.Text.Json.JsonDocument.Parse(System.IO.File.ReadAllText(fix));
+                var root = doc.RootElement;
+                int n = root.GetProperty("n").GetInt32();
+                var obsRows = root.GetProperty("obs"); var maskRows = root.GetProperty("mask");
+                var acts = root.GetProperty("action"); var logitRows = root.GetProperty("logits");
+                var obs = new float[w.ObsSize]; var h1 = new float[w.Hidden]; var h2 = new float[w.Hidden];
+                var logits = new float[w.Actions]; var mask = new byte[w.Actions];
+                int mismatches = 0; float maxErr = 0f;
+                for (int i = 0; i < n; i++)
+                {
+                    int k = 0; foreach (var v in obsRows[i].EnumerateArray()) obs[k++] = (float)v.GetDouble();
+                    k = 0; foreach (var v in maskRows[i].EnumerateArray()) mask[k++] = (byte)v.GetInt32();
+                    w.Logits(obs, h1, h2, logits);
+                    k = 0; foreach (var v in logitRows[i].EnumerateArray()) { maxErr = Math.Max(maxErr, Math.Abs(logits[k++] - (float)v.GetDouble())); }
+                    if (w.Greedy(logits, mask) != acts[i].GetInt32()) mismatches++;
+                }
+                T.Assert(mismatches == 0 && maxErr < 1e-3f, $"{mismatches}/{n} action mismatches, max logit error {maxErr:E2}");
+            });
+        }
+        T.Run("learned policy runs a level and only ever picks legal phases", () =>
+        {
+            var files = System.IO.Directory.GetFiles("../godot/policies", "*.bin");
+            if (files.Length == 0) return;
+            var w = PolicyWeights.FromBytes(System.IO.File.ReadAllBytes(files[0]));
+            var level = Levels.Get("grid3");
+            var sim = new Simulation(level, 5);
+            foreach (var nd in sim.Network.Nodes)
+                if (nd.Control is SignalController c) { c.Policy = new LearnedPolicy(w); c.DecisionInterval = 5f; }
+            for (int i = 0; i < 3000; i++) sim.Step();
+            T.Assert(sim.Metrics.Completed > 50, $"completed {sim.Metrics.Completed}");
+        });
+
         Console.WriteLine(T.Failed == 0 ? "\nALL TESTS PASSED" : $"\n{T.Failed} TEST(S) FAILED");
         Environment.Exit(T.Failed);
     }

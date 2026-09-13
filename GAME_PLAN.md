@@ -227,6 +227,21 @@ the trained policy (P2) should revisit that. Smoke gate: 34 checks.
 **P2 — AI in engine** (1–2 weeks)
 Section 7. AI-driven lights become the default; the ghost is the real policy.
 *Gate:* smoke test reproduces the Python evaluator's actions.
+*Status: done 2026-09-13.* `training/export_policy.py` dumps a shared
+policy's actor to `godot/policies/<tag>.bin` plus a 500-row parity fixture;
+`Signal.Core.LearnedPolicy` is the 233→128→128→8 forward pass over the same
+`AgentView` observations the trainer used, and `Signal.Tests` checks it
+reproduces every PyTorch greedy action (it does, max logit error ~1e-6).
+Two brains, chosen by level (`GameAi`): `shared-w1-v4-s0` for a lone
+junction, trained in three minutes on the new `w1-training` level (six
+unconnected junctions at once, so the policy sees "no neighbours"), and
+`shared-grid3-flow-v4-s0`, the article's grid brain retrained under the v4
+sim rules (return −31.0 vs −33.7 before). The grid brain alone was useless on
+a lone junction (it holds one phase forever: all-zero neighbour blocks are
+out of distribution), which is why the second brain exists. The World 1
+policy beats aging MaxPressure on every signal puzzle; one threshold moved
+(Fair play, 15→18 s). Aging MaxPressure remains the fallback when weights are
+missing, and `--ai=mp` forces it. Retraining is cheap: 600k steps in ~3 min.
 
 **P3 — Editor** (3–4 weeks)
 Section 6 MVP, then author Worlds 2 and 3 *with the editor* rather than in

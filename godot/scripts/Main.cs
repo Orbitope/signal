@@ -37,6 +37,7 @@ namespace SignalGodot
             SizeWindowForDisplay();
             Progress.Load();
             ApplyScale(Progress.UiScale, save: false);
+            LoadGameAi();
 
             Runner = new SimRunner();
             AddChild(Runner);
@@ -69,6 +70,36 @@ namespace SignalGodot
             else if (level != null) ShowSandbox(level);
             else ShowMenu();
             if (_shotPath != null && Runner.TimeScale > 0f) Runner.TimeScale = 8f;   // reach the capture time quickly
+        }
+
+        /// <summary>The trained policies run the lights when their weights are
+        /// present (one for a lone junction, one for networks); otherwise the
+        /// aging MaxPressure stand-in. --ai=mp forces the stand-in.</summary>
+        public const string JunctionPolicyPath = "res://policies/shared-w1-v4-s0.bin";
+        public const string NetworkPolicyPath = "res://policies/shared-grid3-flow-v4-s0.bin";
+
+        public static void LoadGameAi()
+        {
+            bool learned = (Arg("ai") ?? "learned") == "learned";
+            GameAi.Junction = Load(JunctionPolicyPath, learned, out GameAi.JunctionName);
+            GameAi.Network = Load(NetworkPolicyPath, learned, out GameAi.NetworkName);
+            GD.Print($"game AI: junction = {GameAi.JunctionName}; network = {GameAi.NetworkName}");
+        }
+
+        private static System.Func<SignalController, ISignalPolicy> Load(string path, bool learned, out string name)
+        {
+            if (learned && FileAccess.FileExists(path))
+            {
+                try
+                {
+                    var w = PolicyWeights.FromBytes(FileAccess.GetFileAsBytes(path));
+                    name = "trained policy " + w.Tag;
+                    return ctl => new LearnedPolicy(w);
+                }
+                catch (System.Exception e) { GD.PushWarning($"policy weights failed to load ({path}): {e.Message}"); }
+            }
+            name = "aging MaxPressure";
+            return ctl => new AgingMaxPressurePolicy();
         }
 
         // ------------------------------------------------------------ modes

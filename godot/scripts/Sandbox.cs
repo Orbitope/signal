@@ -155,7 +155,7 @@ namespace SignalGodot
             string lead = you <= ghost ? "you lead" : "AI leads";
             _title.AddThemeColorOverride("font_color", you <= ghost ? Orbitope.TextBright : Orbitope.TextSecondary);
             string speed = r.TimeScale <= 0f ? "paused" : $"{r.TimeScale:F0}x";
-            _hud.Text = $"t {r.Sim.Time,5:F0}s / {r.Level.duration:F0}s   {speed}   {r.SignalCount} signals\n" +
+            _hud.Text = $"t {r.Sim.Time,5:F0}s / {r.Level.duration:F0}s   {speed}   {r.SignalCount} signals   AI: {r.AiName}\n" +
                         $"avg wait  you {you,5:F1}s   AI {ghost,5:F1}s   ({lead})\n" +
                         $"in system {r.Sim.VehiclesInSystem()}   done {r.Sim.Metrics.Completed}   " +
                         $"spillbacks {r.Sim.Metrics.SpillbackEvents}";

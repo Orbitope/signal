@@ -32,6 +32,16 @@ godot --headless --path . --import
 The window opens at the project's 1280×800 times the display scale (Retina
 gets 2560×1600) and the canvas stretches to it, so nothing renders half size.
 
+## The AI
+
+`policies/*.bin` are exported actors (`training/export_policy.py`). At startup
+`Main.LoadGameAi` picks `shared-w1-v4-s0` for a lone junction and
+`shared-grid3-flow-v4-s0` for anything with more than one signal; if a file is
+missing the light-runner falls back to `AgingMaxPressurePolicy`. `--ai=mp`
+forces the fallback. The sandbox HUD names the AI in play. Each `.parity.json`
+next to a `.bin` is the fixture `Signal.Tests` uses to prove the C# forward
+pass matches PyTorch.
+
 ## Dev hooks (no display needed)
 
 ```
@@ -51,11 +61,12 @@ Smoke gate (CI), headless:
 godot --headless --path . res://scenes/smoke.tscn
 ```
 
-34 checks: Core sims under Godot's .NET host, determinism, ghost lockstep,
+36 checks: Core sims under Godot's .NET host, determinism, ghost lockstep,
 fixed-tick accounting, registry levels run, tap override scoping and expiry,
 round finish, edit ops build legal levels (roundabout macro, bays, refusal of
 an edit that strands traffic), every World 1 puzzle fails as given and solves
-with its authored answer, puzzle load honours a timed plan. Exits nonzero on
+with its authored answer, puzzle load honours a timed plan, the trained
+policies load from res:// and drive a grid. Exits nonzero on
 failure. `dotnet build` works standalone; the smoke scene needs the godot
 binary (mono build) on PATH.
 

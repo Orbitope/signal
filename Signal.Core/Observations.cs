@@ -69,13 +69,19 @@ namespace Signal.Core
         private readonly Node[] _neighbor = new Node[ObsSchema.MaxNeighbors];
         private readonly Link[] _neighborConn = new Link[ObsSchema.MaxNeighbors];
 
-        public AgentView(Simulation sim, Node node)
+        /// <param name="attach">True (trainer): take over the controller with an
+        /// ExternalPolicy driven from outside. False (in-engine policy): only
+        /// build the observation view; the controller keeps its own policy.</param>
+        public AgentView(Simulation sim, Node node, bool attach = true)
         {
             Node = node;
             Ctl = (SignalController)node.Control;
-            Policy = new ExternalPolicy();
-            Ctl.Policy = Policy;
-            Ctl.DecisionInterval = float.MaxValue;   // the trainer drives decisions
+            if (attach)
+            {
+                Policy = new ExternalPolicy();
+                Ctl.Policy = Policy;
+                Ctl.DecisionInterval = float.MaxValue;   // the trainer drives decisions
+            }
 
             // Group in-links into canonical approach slots. An approach may be a
             // direct arm (single-lane) or a fork bundle (lanes). We classify by
