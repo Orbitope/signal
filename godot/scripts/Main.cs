@@ -58,6 +58,7 @@ namespace SignalGodot
             foreach (var m in new CanvasLayer[] { _menu, _sandbox, _puzzle, _editor }) m.Visible = false;
 
             _shotPath = Arg("screenshot");
+            Progress.ReadOnly = _shotPath != null || DisplayServer.GetName() == "headless";
             if (_shotPath != null && float.TryParse(Arg("after"), out var shotAt)) _shotAt = shotAt;
 
             string puzzleId = Arg("puzzle");
@@ -75,6 +76,7 @@ namespace SignalGodot
                 if (Arg("popup") is string popup) _editor.DebugOpen(popup);
             }
             else if (level != null) ShowSandbox(level);
+            else if (Arg("list") == "1") ShowPuzzleList();
             else ShowMenu();
             if (_shotPath != null && Runner.TimeScale > 0f) Runner.TimeScale = 8f;   // reach the capture time quickly
         }

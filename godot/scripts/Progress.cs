@@ -13,6 +13,8 @@ namespace SignalGodot
 
         public static Dictionary<string, int> Stars { get; private set; } = new();
         public static float UiScale = 1f;
+        /// <summary>Dev runs (screenshots, smoke) must not write the player's progress.</summary>
+        public static bool ReadOnly;
 
         public static void Load()
         {
@@ -47,7 +49,7 @@ namespace SignalGodot
         {
             if (stars <= StarsFor(puzzleId)) return false;
             Stars[puzzleId] = stars;
-            SaveProgress();
+            if (!ReadOnly) SaveProgress();
             return true;
         }
 
@@ -63,6 +65,7 @@ namespace SignalGodot
 
         public static void SaveSettings()
         {
+            if (ReadOnly) return;
             try
             {
                 using var f = FileAccess.Open(SettingsPath, FileAccess.ModeFlags.Write);
