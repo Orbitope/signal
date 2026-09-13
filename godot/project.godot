@@ -6,6 +6,11 @@ config/name="Signal"
 run/main_scene="res://scenes/main.tscn"
 config/features=PackedStringArray("4.7", "C#")
 
+[display]
+
+window/size/viewport_width=1280
+window/size/viewport_height=800
+
 [dotnet]
 
 project/assembly_name="Signal.Godot"

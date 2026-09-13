@@ -8,29 +8,44 @@ namespace SignalGodot
     /// Draws the road network and signal state; owns the meters→pixels mapping
     /// that every other view uses. Right-hand traffic: each directed link is
     /// offset to its travel-direction right so opposing links sit side by side.
+    ///
+    /// Sizes are zoom-aware: a road, stop bar, or ring is drawn at its real
+    /// world size when zoomed in, but never below a minimum on-screen size, so
+    /// a 25-signal map fit to the window still reads instead of collapsing
+    /// into hairlines.
     /// </summary>
     public partial class NetworkView : Node2D
     {
         [Export] public float PixelsPerMeter = 2.2f;
-        [Export] public float LaneOffset = 2.2f;      // meters, perpendicular shift
+        [Export] public float LaneOffset = 2.2f;        // meters, perpendicular shift
+        [Export] public float LaneWidthMeters = 3.6f;   // drawn width of one directed link
 
         public SimRunner Runner;
 
-        // Orbitope tokens. Stress on red bars ramps toward AMBER (friction),
-        // never coral — coral is reserved for spillback (see FlashSpillback).
-        private static readonly Color RoadColor = Orbitope.Raised;
+        // Orbitope tokens. The road body sits between Raised and Border so it
+        // reads against Void at any zoom. Stress on red bars ramps toward AMBER
+        // (friction), never coral — coral is reserved for spillback.
+        private static readonly Color RoadColor = Orbitope.Raised.Lerp(Orbitope.Border, 0.55f);
         private static readonly Color GreenBar = Orbitope.LightGreen;
         private static readonly Color RedBar = Orbitope.LightRed;
         private static readonly Color YellowBar = Orbitope.LightYellow;
         private static readonly Color StressTint = Orbitope.AmberBright;
 
         // Spillback pulses: linkId -> remaining flash time.
-        private readonly System.Collections.Generic.Dictionary<int, float> _spillFlash = new();
+        private readonly Dictionary<int, float> _spillFlash = new();
+        private readonly List<int> _flashKeys = new();
         private const float SpillFlashDuration = 1.4f;
 
         public void FlashSpillback(int linkId) => _spillFlash[linkId] = SpillFlashDuration;
 
         public Vector2 ToWorld(float x, float y) => new(x * PixelsPerMeter, -y * PixelsPerMeter);
+
+        /// <summary>Camera zoom (world px → screen px). 1 when there is no camera.</summary>
+        public float Zoom => GetViewport()?.GetCamera2D()?.Zoom.X ?? 1f;
+
+        /// <summary>A world size that never renders below minScreenPx on screen.</summary>
+        public float Legible(float worldPx, float minScreenPx)
+            => Mathf.Max(worldPx, minScreenPx / Mathf.Max(Zoom, 0.01f));
 
         /// <summary>World-space endpoints of a link's drawn centerline. Base
         /// offset separates opposing directions (right-hand traffic); parallel
@@ -77,17 +92,17 @@ namespace SignalGodot
             }
             QueueRedraw();
         }
-        private readonly System.Collections.Generic.List<int> _flashKeys = new();
 
         public override void _Draw()
         {
             if (Runner?.Sim == null) return;
             var net = Runner.Sim.Network;
+            float roadW = Legible(LaneWidthMeters * PixelsPerMeter, 3.5f);
 
             foreach (var link in net.Links)
             {
                 var (a, b) = LinkLine(link);
-                DrawLine(a, b, RoadColor, 5.5f * PixelsPerMeter / 2.2f);
+                DrawLine(a, b, RoadColor, roadW);
             }
 
             // Spillback: the scene's single coral element — a pulse along the
@@ -98,10 +113,11 @@ namespace SignalGodot
                 var (a, b) = LinkLine(link);
                 float t = kv.Value / SpillFlashDuration;
                 var c = Orbitope.Coral; c.A = 0.25f + 0.6f * t;
-                DrawLine(a, b, c, (6.5f + 3f * t) * PixelsPerMeter / 2.2f);
+                DrawLine(a, b, c, Legible((6.5f + 3f * t) * PixelsPerMeter / 2.2f, 4f));
             }
 
             // Stop bars at signalized nodes, stress-tinted by head-of-queue wait.
+            float half = Legible(6f, 5f), back = Legible(4f, 3f), barW = Legible(3.5f, 2.5f);
             foreach (var node in net.Nodes)
             {
                 if (node.Control is not SignalController ctl) continue;
@@ -111,7 +127,7 @@ namespace SignalGodot
                     var (a, b) = LinkLine(link);
                     var dir = (b - a).Normalized();
                     var right = new Vector2(-dir.Y, dir.X);
-                    var barCenter = b - dir * 4f;
+                    var barCenter = b - dir * back;
                     Color c = RedBar;
                     if (ctl.State == SignalState.Yellow) c = YellowBar;
                     else if (ctl.State == SignalState.Green && MovementAllowedFrom(node, ctl, inId))
@@ -123,12 +139,12 @@ namespace SignalGodot
                         float stress = Mathf.Clamp(front.Wait / 45f, 0f, 1f);
                         c = c.Lerp(StressTint, stress * 0.8f);
                     }
-                    DrawLine(barCenter - right * 6f, barCenter + right * 6f, c, 3.5f);
+                    DrawLine(barCenter - right * half, barCenter + right * half, c, barW);
                 }
                 // Player override: an amber ring on a light being held by a tap.
                 if (Runner.IsOverriding(node.Id))
-                    DrawArc(ToWorld(node.X, node.Y), 9f * PixelsPerMeter / 2.2f, 0f, Mathf.Tau, 32,
-                            Orbitope.AmberBright, 2.5f);
+                    DrawArc(ToWorld(node.X, node.Y), Legible(9f * PixelsPerMeter / 2.2f, 9f),
+                            0f, Mathf.Tau, 32, Orbitope.AmberBright, Legible(2.5f, 2f));
             }
         }
 
@@ -145,7 +161,7 @@ namespace SignalGodot
         public bool TryPickApproach(Vector2 worldPos, out int nodeId, out int inLinkId)
         {
             nodeId = -1; inLinkId = -1;
-            float best = 18f * PixelsPerMeter;   // pick radius in px
+            float best = Legible(18f * PixelsPerMeter, 16f);   // pick radius, world px
             var net = Runner.Sim.Network;
             foreach (var node in net.Nodes)
             {

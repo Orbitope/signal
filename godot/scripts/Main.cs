@@ -30,6 +30,11 @@ namespace SignalGodot
         private readonly List<string> _names = new();
         private int _levelIdx;
 
+        // --screenshot dev hook (see _Ready)
+        private string _shotPath;
+        private float _shotAt = 40f;
+        private bool _shotTaken;
+
         public override void _Ready()
         {
             _runner = new SimRunner();
@@ -50,7 +55,11 @@ namespace SignalGodot
             BuildResults();
 
             _names.AddRange(Levels.Names);
-            string want = ParseLevelArg() ?? "sc-couplet";
+            // Dev hook: --screenshot=path [--after=simSeconds] renders a level at
+            // speed, saves a PNG, and quits. Used for visual checks without a display.
+            _shotPath = Arg("screenshot");
+            if (_shotPath != null && float.TryParse(Arg("after"), out var shotAt)) _shotAt = shotAt;
+            string want = Arg("level") ?? "sc-couplet";
             int idx = _names.IndexOf(want);
             if (idx < 0)
             {
@@ -60,17 +69,19 @@ namespace SignalGodot
                 _pick.AddItem(want);
             }
             LoadLevel(idx);
+            if (_shotPath != null) _runner.TimeScale = 8f;   // reach the capture time quickly
         }
 
         // ------------------------------------------------------------ levels
 
-        private static string ParseLevelArg()
+        /// <summary>User arg "--key=value" or "--key value" (after "--" on the command line).</summary>
+        private static string Arg(string key)
         {
             var args = OS.GetCmdlineUserArgs();
             for (int i = 0; i < args.Length; i++)
             {
-                if (args[i].StartsWith("--level=")) return args[i].Substring("--level=".Length);
-                if (args[i] == "--level" && i + 1 < args.Length) return args[i + 1];
+                if (args[i].StartsWith("--" + key + "=")) return args[i].Substring(key.Length + 3);
+                if (args[i] == "--" + key && i + 1 < args.Length) return args[i + 1];
             }
             return null;
         }
@@ -229,6 +240,11 @@ namespace SignalGodot
         public override void _Process(double delta)
         {
             if (_runner.Sim == null) return;
+            if (_shotPath != null && !_shotTaken && _runner.Sim.Time >= _shotAt)
+            {
+                _shotTaken = true;
+                _ = CaptureAndQuit(_shotPath);
+            }
             float you = _runner.Sim.Metrics.LiveAvgWait(_runner.Sim);
             float ghost = _runner.Ghost.Metrics.LiveAvgWait(_runner.Ghost);
             string lead = you <= ghost ? "you lead" : "AI leads";
@@ -239,6 +255,17 @@ namespace SignalGodot
                         $"avg wait  you {you,5:F1}s   AI {ghost,5:F1}s   ({lead})\n" +
                         $"in system {_runner.Sim.VehiclesInSystem()}   done {_runner.Sim.Metrics.Completed}   " +
                         $"spillbacks {_runner.Sim.Metrics.SpillbackEvents}";
+        }
+
+        private async System.Threading.Tasks.Task CaptureAndQuit(string path)
+        {
+            _runner.TimeScale = 0f;
+            // Let one more frame render with the sim frozen, then grab it.
+            await ToSignal(RenderingServer.Singleton, RenderingServer.SignalName.FramePostDraw);
+            var img = GetViewport().GetTexture().GetImage();
+            var err = img.SavePng(path);
+            GD.Print(err == Error.Ok ? $"screenshot saved: {path}" : $"screenshot FAILED ({err}): {path}");
+            GetTree().Quit(err == Error.Ok ? 0 : 1);
         }
 
         // ------------------------------------------------------------ input

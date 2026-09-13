@@ -192,6 +192,14 @@ Rough, solo, part-time weeks. Each phase ends at a gate you can actually check.
 Replace the hardcoded scene: load any `LevelDef` JSON, camera fit / pan / zoom,
 run / reset / speed, a results panel, keep the smoke gate green.
 *Gate:* play `sc-couplet` and the corridor in Godot, tap any approach.
+*Status: done 2026-09-12.* Level player with a level picker, zoom-aware
+rendering (roads, cars, and stop bars keep a minimum on-screen size when the
+whole map is in view), MaxPressure-driven lights with 12 s tap overrides,
+results panel, and a `--screenshot` dev hook. Smoke gate extended to 12
+checks (registry levels run, override scoping and expiry, round finish), all
+passing on Godot 4.7.1. Note the toolchain fix along the way: the Godot SDK
+now restores from nuget.org, and a fresh checkout needs one
+`godot --headless --path . --import` for the fonts.
 
 **P1 — Puzzle MVP** (2–3 weeks)
 `PuzzleDef`, the edit-op list, four tools (control swap, one-way, turn mask,

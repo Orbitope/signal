@@ -17,6 +17,12 @@ namespace SignalGodot
         private Rect2 _fit;
         private bool _hasFit;
 
+        public override void _Ready()
+        {
+            // The fit depends on the viewport size, so redo it when the window changes.
+            GetViewport().SizeChanged += Refit;
+        }
+
         public void FitTo(Rect2 world, float pad = 0.88f)
         {
             _fit = world; _hasFit = true;
