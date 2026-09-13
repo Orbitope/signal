@@ -344,18 +344,19 @@ namespace SignalGodot
 
         private void DrawCompass(RoadNetwork net)
         {
-            float cx = 0, cy = 0; int k = 0;
-            foreach (var n in net.Nodes) if (!n.IsBoundary) { cx += n.X; cy += n.Y; k++; }
-            if (k == 0) return;
-            cx /= k; cy /= k;
             int fontSize = Mathf.RoundToInt(Legible(7f * PixelsPerMeter, 16f));
             foreach (var n in net.Nodes)
             {
                 if (!n.IsBoundary) continue;
-                float dx = n.X - cx, dy = n.Y - cy;
+                // Direction of this arm from the junction it hangs off, not from the map centre.
+                Signal.Core.Node from = null;
+                if (n.InLinks.Count > 0) from = net.NodeById(net.LinkById(n.InLinks[0]).From);
+                else if (n.OutLinks.Count > 0) from = net.NodeById(net.LinkById(n.OutLinks[0]).To);
+                if (from == null) continue;
+                float dx = n.X - from.X, dy = n.Y - from.Y;
                 string label = Mathf.Abs(dx) > Mathf.Abs(dy) ? (dx > 0 ? "E" : "W") : (dy > 0 ? "N" : "S");
                 var p = ToWorld(n.X, n.Y);
-                var outward = (p - ToWorld(cx, cy)).Normalized();
+                var outward = (p - ToWorld(from.X, from.Y)).Normalized();
                 var at = p + outward * Legible(9f * PixelsPerMeter, 22f) + new Vector2(0f, fontSize * 0.35f);
                 DrawString(Orbitope.MonoBold, at, label, HorizontalAlignment.Center, -1f, fontSize, Orbitope.TextSecondary);
             }

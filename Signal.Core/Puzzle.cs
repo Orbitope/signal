@@ -364,10 +364,10 @@ namespace Signal.Core
             var nd = lv.network.nodes.Find(n => n.id == id);
             if (nd == null) return $"#{id}";
             if (!nd.isBoundary) return $"junction {id}";
-            // Compass name from position relative to the network centre.
-            float cx = 0, cy = 0; int k = 0;
-            foreach (var n in lv.network.nodes) if (!n.isBoundary) { cx += n.x; cy += n.y; k++; }
-            if (k > 0) { cx /= k; cy /= k; }
+            // Compass name from the arm's direction off the junction it hangs from.
+            var link = lv.network.links.Find(l => l.from == id) ?? lv.network.links.Find(l => l.to == id);
+            var from = link == null ? null : lv.network.nodes.Find(n => n.id == (link.from == id ? link.to : link.from));
+            float cx = from?.x ?? 0f, cy = from?.y ?? 0f;
             float dx = nd.x - cx, dy = nd.y - cy;
             return Math.Abs(dx) > Math.Abs(dy) ? (dx > 0 ? "the east" : "the west") : (dy > 0 ? "the north" : "the south");
         }
