@@ -48,9 +48,12 @@ namespace Signal.Core
                     if (dist < blockDist)
                     {
                         // Which way is the stopped vehicle going? If its movement
-                        // doesn't conflict with ours, it isn't in our path.
+                        // doesn't conflict with ours, it isn't in our path. Nor is
+                        // it if a signal is holding it at the line (red or yellow):
+                        // that is when a permissive left "sneaks" through.
                         var theirMove = front.OnLastLink ? null : node.FindMovement(linkId, front.NextLink);
-                        if (theirMove != null && node.Conflicts[m.Index, theirMove.Index])
+                        if (theirMove != null && node.Conflicts[m.Index, theirMove.Index] &&
+                            !(node.Control is SignalController sc && !sc.MovementGreen(theirMove.Index)))
                             return false;
                     }
                     continue;
@@ -177,8 +180,13 @@ namespace Signal.Core
 
         public bool MayEnter(Simulation sim, Node node, Vehicle v, Movement m)
         {
-            if (State != SignalState.Green) return false;
             if (!_allowed[m.Index]) return false;
+            // Protected movements enter on green only. A permissive movement may
+            // also clear on yellow, once the opposing traffic it yields to is held
+            // at the line — the "sneaker" that keeps a single lane from being
+            // blocked by one left-turner for a whole cycle.
+            if (State == SignalState.AllRed) return false;
+            if (State == SignalState.Yellow && !_permissive[m.Index]) return false;
             if (_permissive[m.Index])
             {
                 // Permissive: yield to conflicting movements that are protected-green now.
@@ -252,8 +260,9 @@ namespace Signal.Core
     }
 
     // =====================================================================
-    //  Two-way stop — major road never yields; minor road stops, then
-    //  gap-accepts against the major in-links.
+    //  Two-way stop — major road through/right never yields; a major-road
+    //  LEFT gap-accepts against the opposing major approach (it crosses that
+    //  traffic); minor road stops, then gap-accepts against the major in-links.
     // =====================================================================
     public sealed class TwoWayStopControl : IIntersectionControl
     {
@@ -266,7 +275,8 @@ namespace Signal.Core
 
         public bool MayEnter(Simulation sim, Node node, Vehicle v, Movement m)
         {
-            if (MajorInLinks.Contains(m.InLink)) return true;
+            if (MajorInLinks.Contains(m.InLink))
+                return m.Turn != TurnMask.Left || GapAcceptance.Acceptable(sim, node, m, MajorInLinks, GapThreshold);
             if (!v.HasStopped) return false;
             return GapAcceptance.Acceptable(sim, node, m, MajorInLinks, GapThreshold);
         }

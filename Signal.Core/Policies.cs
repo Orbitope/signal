@@ -111,6 +111,47 @@ namespace Signal.Core
         private static readonly HashSet<int> _seenIn = new HashSet<int>();
     }
 
+    /// <summary>
+    /// The game's light-runner: MaxPressure with an aging guard. Plain
+    /// MaxPressure is throughput-optimal but will leave a lone car on a side
+    /// street (or in a left-turn bay) unserved for minutes while the main
+    /// queue stays longer. Real actuated controllers cap that with a max-out;
+    /// this does the same: any phase whose head-of-queue car has waited
+    /// longer than MaxHold is served next, oldest first. MaxPressurePolicy is
+    /// untouched (it is the article's baseline).
+    /// </summary>
+    public sealed class AgingMaxPressurePolicy : ISignalPolicy
+    {
+        public float MaxHold = 40f;
+        private readonly MaxPressurePolicy _mp = new MaxPressurePolicy();
+
+        public int SelectPhase(Simulation sim, Node node, SignalController ctl)
+        {
+            int starved = -1; float oldest = MaxHold;
+            for (int p = 0; p < ctl.Phases.Count; p++)
+            {
+                if (p == ctl.CurrentPhase) continue;
+                float w = OldestHeadWait(sim, node, ctl, p);
+                if (w > oldest) { oldest = w; starved = p; }
+            }
+            return starved >= 0 ? starved : _mp.SelectPhase(sim, node, ctl);
+        }
+
+        /// <summary>Longest wait among the cars at the head of this phase's in-links.</summary>
+        public static float OldestHeadWait(Simulation sim, Node node, SignalController ctl, int phase)
+        {
+            float w = 0f;
+            var mv = ctl.Phases[phase].movements;
+            for (int i = 0; i < mv.Count; i++)
+            {
+                var link = sim.Network.LinkById(node.Movements[mv[i]].InLink);
+                var front = link.Front;
+                if (front != null && front.Speed < SimConfig.QueueSpeed && front.Wait > w) w = front.Wait;
+            }
+            return w;
+        }
+    }
+
     /// <summary>Externally driven phase requests: player taps in tactical mode,
     /// or ML-Agents actions via the adapter. Holds the last request.</summary>
     public sealed class ExternalPolicy : ISignalPolicy

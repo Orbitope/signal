@@ -29,6 +29,7 @@ class Program
     {
         if (args.Length == 0) { Console.WriteLine("commands: bench | run | hash | export"); return 1; }
         var opt = ParseArgs(args);
+        if (args[0] == "puzzle") return Puzzle(opt);
 
         LevelDef level = LoadLevel(opt);
         BuildVariant build = opt.TryGetValue("build", out var bp)
@@ -105,6 +106,48 @@ class Program
         for (int i = 0; i < steps; i++) sim.Step();
         return new Result(policy, sim.Metrics.LiveAvgWait(sim), sim.Metrics.ThroughputPerMin(sim),
                           sim.Metrics.MaxWait, sim.Metrics.SpillbackEvents, sim.Metrics.Completed);
+    }
+
+    // signal-headless puzzle [--id w1-3] [--all]
+    // Prints, for each puzzle, every single-tool answer the toolbox allows with
+    // its measured objectives. This is how objective thresholds get set: from
+    // the table, never by guessing.
+    static int Puzzle(Dictionary<string, string> opt)
+    {
+        opt.TryGetValue("id", out var onlyId);
+        float scale = opt.TryGetValue("scale", out var sc) ? float.Parse(sc) : 1f;
+        foreach (var w in Worlds.All)
+        foreach (var p in w.puzzles)
+        {
+            if (onlyId != null && p.id != onlyId) continue;
+            if (scale != 1f)
+                foreach (var f in p.level.demand.flows)
+                    for (int i = 0; i < f.rate.rates.Count; i++) f.rate.rates[i] *= scale;
+            if (opt.ContainsKey("noleft"))   // authoring experiment: drop every left-turning flow
+                p.level.demand.flows.RemoveAll(f => (f.origin, f.dest) is (100, 101) or (101, 102) or (102, 103) or (103, 100));
+            if (opt.TryGetValue("ai", out var ai)) p.aiDecisionInterval = float.Parse(ai);
+            if (opt.TryGetValue("hold", out var hold))
+                PuzzleScorer.AiOverride = ctl => new AgingMaxPressurePolicy { MaxHold = float.Parse(hold) };
+            if (opt.TryGetValue("policy", out var pol))
+                PuzzleScorer.AiOverride = pol switch
+                {
+                    "fixed" => ctl => new FixedTimePolicy(20f * ctl.Phases.Count, Edits.NormalizedSplits(null, ctl.Phases.Count)),
+                    "greedy" => ctl => new GreedyPolicy(),
+                    _ => null
+                };
+            Console.WriteLine($"\n== {p.id}  {p.title}   budget ${p.budget} par ${p.par}   seeds {p.seeds.Count} x {p.level.duration:F0}s");
+            foreach (var o in p.objectives) Console.WriteLine($"   objective: {o.Describe()}");
+            Console.WriteLine($"   {"answer",-42} {"cost",5} {"avg",7} {"max",7} {"done",6} {"spill",5}  result");
+            foreach (var (label, ops) in PuzzleScorer.Candidates(p))
+            {
+                var r = PuzzleScorer.Evaluate(p, ops);
+                if (r.Error != null) { Console.WriteLine($"   {label,-42}  --  {r.Error}"); continue; }
+                string verdict = r.Solved ? $"SOLVED {new string('*', r.Stars)}" : "no    ";
+                foreach (var o in r.Objectives) verdict += $"  {(o.Pass ? "ok" : "NO")} {o.Def.kind} worst {o.Def.Format(o.Worst)}";
+                Console.WriteLine($"   {label,-42} {r.Cost,5} {r.MeanAvgWait,7:F1} {r.MeanMaxWait,7:F0} {r.MeanCompleted,6:F0} {r.TotalSpillbacks,5}  {verdict}");
+            }
+        }
+        return 0;
     }
 
     static void Attach(Simulation sim, string policy)
