@@ -8,7 +8,7 @@ namespace SignalGodot
     /// The P0 level player: any built-in level (or a LevelDef JSON path), the
     /// game AI on every light, tap an approach to hold it green for a while,
     /// and a lockstep AI ghost to beat. Results panel at the end of the round.
-    /// Keys: space pause · 1/2/4 speed · R restart · [ ] level · F refit.
+    /// Keys: space pause · 1/2/4/8/9 speed (1x to 64x) · R restart · [ ] level · F refit.
     /// </summary>
     public partial class Sandbox : CanvasLayer
     {
@@ -76,7 +76,7 @@ namespace SignalGodot
 
             _hud = Ui.Label("", Ui.Body, Orbitope.TextPrimary);
             col.AddChild(_hud);
-            _hint = Ui.Label("Tap an approach to hold it green · space pause · 1/2/4 speed · R restart · [ ] level · F fit · Esc menu",
+            _hint = Ui.Label("Tap an approach to hold it green · space pause · 1/2/4/8/9 speed (1x to 64x) · R restart · [ ] level · F fit · Esc menu",
                              Ui.Small, Orbitope.TextMuted);
             col.AddChild(_hint);
 
@@ -181,6 +181,8 @@ namespace SignalGodot
                         case Key.Key1: App.Runner.TimeScale = 1f; break;
                         case Key.Key2: App.Runner.TimeScale = 2f; break;
                         case Key.Key4: App.Runner.TimeScale = 4f; break;
+                        case Key.Key8: App.Runner.TimeScale = 16f; break;
+                        case Key.Key9: App.Runner.TimeScale = 64f; break;
                         case Key.R: Restart(); break;
                         case Key.Bracketleft: LoadLevel(_levelIdx - 1); break;
                         case Key.Bracketright: LoadLevel(_levelIdx + 1); break;

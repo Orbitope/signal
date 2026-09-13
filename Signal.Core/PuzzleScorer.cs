@@ -203,6 +203,48 @@ namespace Signal.Core
             return list;
         }
 
+        /// <summary>Authoring search: every assignment of a control (keep / all-way /
+        /// two-way E-W / two-way N-S / signal / roundabout) to every junction, for
+        /// levels of up to five junctions. Finds combinations single-tool
+        /// candidates miss (a signal at the busy corner, stops elsewhere).</summary>
+        public static List<(string label, List<EditOp> ops)> SearchControls(PuzzleDef puzzle, bool roundabouts)
+        {
+            var list = new List<(string, List<EditOp>)>();
+            var lv = puzzle.level;
+            var junctions = lv.network.nodes.FindAll(n => !n.isBoundary && lv.network.links.FindAll(l => l.to == n.id).Count >= 3);
+            if (junctions.Count == 0 || junctions.Count > 5) return list;
+            var options = new List<(string tag, Func<int, EditOp> make)> { ("keep", _ => null) };
+            foreach (var t in puzzle.toolbox)
+            {
+                if (t.kind == EditKind.SetControl && t.control == ControlType.TwoWayStop)
+                {
+                    options.Add(("2wayEW", id => new EditOp { kind = EditKind.SetControl, node = id, control = ControlType.TwoWayStop, majorAxis = 0 }));
+                    options.Add(("2wayNS", id => new EditOp { kind = EditKind.SetControl, node = id, control = ControlType.TwoWayStop, majorAxis = 1 }));
+                }
+                else if (t.kind == EditKind.SetControl)
+                    options.Add((t.control == ControlType.Signalized ? "signal" : "allway", id => new EditOp { kind = EditKind.SetControl, node = id, control = t.control }));
+                else if (t.kind == EditKind.Roundabout && roundabouts)
+                    options.Add(("ring", id => new EditOp { kind = EditKind.Roundabout, node = id }));
+            }
+            int k = junctions.Count, n = options.Count;
+            long total = 1; for (int i = 0; i < k; i++) total *= n;
+            for (long code = 0; code < total; code++)
+            {
+                var sol = Solution.From(puzzle.initialOps);
+                var parts = new List<string>();
+                long c = code;
+                for (int i = 0; i < k; i++)
+                {
+                    int o = (int)(c % n); c /= n;
+                    var op = options[o].make(junctions[i].id);
+                    if (op != null) sol.Add(op);
+                    parts.Add(options[o].tag);
+                }
+                list.Add((string.Join("/", parts), sol.Ops));
+            }
+            return list;
+        }
+
         static List<EditOp> With(List<EditOp> initial, int nodeId, EditOp op)
         {
             var s = Solution.From(initial);

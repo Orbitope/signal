@@ -281,6 +281,23 @@ Next lever, if a network brain matters for World 3: a fairness term in the
 reward (the pressure reward is what starves side streets) and per-shape
 curricula rather than one composite level.
 
+*Playtest feedback (2026-09-13, first hands-on):* the puzzles were trivial
+and the briefs named the fix; 8x was far too slow for a 300 s round. Fixes:
+Finish-now (the score is computed before the run, so the picture just
+catches up), 16x/64x; every brief rewritten to describe symptoms only, hints
+stay behind the button. World 2 rebuilt around combinations found with
+`signal-headless puzzle --id X --search 1 --auto 1`, which enumerates every
+control assignment over up to five junctions and derives goals from the best
+one. What that search taught: in this sim two-way stops with the right
+priority win whenever a level is unsaturated, so "which corner needs the
+signal" only exists in a narrow demand band, and several candidate puzzles
+(a busy middle cross street, a priority chain, a rush pair) collapsed to
+"two-way stops everywhere" and were dropped. Survivors: the busy corner (one
+signal, budget for one), two busy corners (the cheap fix is at the QUIET
+corners), four in a row (one signal at the first busy street and the last
+junction left as an all-way stop), plus short block, rush pair, timed row,
+roundabout pair. World 2 is now "Networks".
+
 *P4 so far (2026-09-13):* World 2 unlocks at 9 total stars; a tutorial
 callout on the first puzzle of each world until the first change; signal bars
 carry state as shape too (solid = go, thin = clearing, broken = stop); a disc

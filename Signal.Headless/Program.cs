@@ -140,16 +140,54 @@ class Program
             Console.WriteLine($"\n== {p.id}  {p.title}   budget ${p.budget} par ${p.par}   seeds {p.seeds.Count} x {p.level.duration:F0}s");
             foreach (var o in p.objectives) Console.WriteLine($"   objective: {o.Describe()}");
             Console.WriteLine($"   {"answer",-42} {"cost",5} {"avg",7} {"max",7} {"done",6} {"spill",5}  result");
-            foreach (var (label, ops) in PuzzleScorer.Candidates(p))
+            var cands = opt.ContainsKey("search") ? PuzzleScorer.SearchControls(p, opt.TryGetValue("search", out var sv) && sv == "rings") : PuzzleScorer.Candidates(p);
+            var solved = new List<(string label, PuzzleResult r)>();
+            var all = new List<(string label, PuzzleResult r, string verdict)>();
+            foreach (var (label, ops) in cands)
             {
                 var r = PuzzleScorer.Evaluate(p, ops);
                 if (r.Error != null) { Console.WriteLine($"   {label,-42}  --  {r.Error}"); continue; }
                 string verdict = r.Solved ? $"SOLVED {new string('*', r.Stars)}" : "no    ";
                 foreach (var o in r.Objectives) verdict += $"  {(o.Pass ? "ok" : "NO")} {o.Def.kind} worst {o.Def.Format(o.Worst)}";
-                Console.WriteLine($"   {label,-42} {r.Cost,5} {r.MeanAvgWait,7:F1} {r.MeanMaxWait,7:F0} {r.MeanCompleted,6:F0} {r.TotalSpillbacks,5}  {verdict}");
+                all.Add((label, r, verdict));
+                if (r.Solved) solved.Add((label, r));
+                if (!opt.ContainsKey("search"))
+                    Console.WriteLine($"   {label,-42} {r.Cost,5} {r.MeanAvgWait,7:F1} {r.MeanMaxWait,7:F0} {r.MeanCompleted,6:F0} {r.TotalSpillbacks,5}  {verdict}");
+            }
+            if (opt.ContainsKey("search"))
+            {
+                // Best twelve by worst-seed average wait, then every solver cheapest first.
+                all.Sort((a, b) => Worst(a.r, ObjectiveKind.AvgWait).CompareTo(Worst(b.r, ObjectiveKind.AvgWait)));
+                Console.WriteLine("   -- best by worst-seed average wait:");
+                foreach (var (label, r, verdict) in all.GetRange(0, Math.Min(12, all.Count)))
+                    Console.WriteLine($"   {label,-42} {r.Cost,5} {r.MeanAvgWait,7:F1} {r.MeanMaxWait,7:F0} {r.MeanCompleted,6:F0} {r.TotalSpillbacks,5}  {verdict}");
+                if (opt.ContainsKey("auto") && all.Count > 0 && all[0].r.Error == null)
+                {
+                    // Derive goals from the best assignment (10% slack) and show who else passes.
+                    var best = all[0].r;
+                    float thrAvg = (float)Math.Ceiling(Worst(best, ObjectiveKind.AvgWait) * 1.1f);
+                    float thrMax = (float)Math.Ceiling(Worst(best, ObjectiveKind.MaxWait) * 1.1f / 5f) * 5f;
+                    var auto = new List<(string label, PuzzleResult r)>();
+                    foreach (var (label, r, _) in all)
+                        if (r.Error == null && Worst(r, ObjectiveKind.AvgWait) <= thrAvg && Worst(r, ObjectiveKind.MaxWait) <= thrMax) auto.Add((label, r));
+                    auto.Sort((a, b) => a.r.Cost != b.r.Cost ? a.r.Cost.CompareTo(b.r.Cost) : a.r.MeanAvgWait.CompareTo(b.r.MeanAvgWait));
+                    Console.WriteLine($"   -- AUTO goals: avg <= {thrAvg:F0}, max <= {thrMax:F0}  ->  {auto.Count} of {all.Count} pass; cheapest:");
+                    foreach (var (label, r) in auto.GetRange(0, Math.Min(10, auto.Count)))
+                        Console.WriteLine($"      {label,-40} ${r.Cost,-4} avg worst {Worst(r, ObjectiveKind.AvgWait),4:F0}  max worst {Worst(r, ObjectiveKind.MaxWait),4:F0}");
+                }
+                solved.Sort((a, b) => a.r.Cost != b.r.Cost ? a.r.Cost.CompareTo(b.r.Cost) : a.r.MeanAvgWait.CompareTo(b.r.MeanAvgWait));
+                Console.WriteLine($"   -- {cands.Count} assignments tried, {solved.Count} solve; cheapest solver: {(solved.Count > 0 ? solved[0].label + " $" + solved[0].r.Cost : "none")}");
+                foreach (var (label, r) in solved.GetRange(0, Math.Min(8, solved.Count)))
+                    Console.WriteLine($"      {label,-40} ${r.Cost,-4} avg {r.MeanAvgWait,5:F1}  max {r.MeanMaxWait,4:F0}");
             }
         }
         return 0;
+    }
+
+    static float Worst(PuzzleResult r, ObjectiveKind kind)
+    {
+        foreach (var o in r.Objectives) if (o.Def.kind == kind) return o.Worst;
+        return r.MeanAvgWait;
     }
 
     /// <summary>--policy learned --weights godot/policies/NAME.bin</summary>

@@ -29,11 +29,30 @@ namespace Signal.Core
         public bool ab = true, ba = true;               // which directions exist
     }
 
+    [Serializable] public class ArmWeight
+    {
+        public int gx, gy, dir;                         // an open arm
+        public float weight = 1f;                       // multiplies every flow starting or ending there
+    }
+
     [Serializable] public class DemandSpec
     {
         public string preset = "balanced";              // balanced | east-west | north-south
         public float total = 24f;                       // veh/min over the whole map
         public bool rush;                               // peak in the middle third
+        public List<ArmWeight> arms = new List<ArmWeight>();   // asymmetry: a busy side street, a quiet one
+
+        public float ArmWeightOf(int boundaryId)
+        {
+            foreach (var a in arms) if (EditorDoc.BoundaryId(a.gx, a.gy, a.dir) == boundaryId) return a.weight;
+            return 1f;
+        }
+
+        public DemandSpec Weigh(int gx, int gy, int dir, float weight)
+        {
+            arms.Add(new ArmWeight { gx = gx, gy = gy, dir = dir, weight = weight });
+            return this;
+        }
     }
 
     [Serializable] public class EditorDoc
@@ -231,6 +250,7 @@ namespace Signal.Core
                 float w = 1f;
                 if (demand.preset == "east-west") w = oEw && tEw ? 4f : oEw || tEw ? 1f : 0.5f;
                 else if (demand.preset == "north-south") w = !oEw && !tEw ? 4f : !oEw || !tEw ? 1f : 0.5f;
+                w *= demand.ArmWeightOf(o.id) * demand.ArmWeightOf(t.id);
                 weights.Add((o, t, w)); sum += w;
             }
             foreach (var (o, t, w) in weights)
@@ -268,6 +288,7 @@ namespace Signal.Core
             foreach (var j in junctions) c.junctions.Add(new JunctionDef { gx = j.gx, gy = j.gy, control = j.control, majorAxis = j.majorAxis, openN = j.openN, openE = j.openE, openS = j.openS, openW = j.openW });
             foreach (var s in streets) c.streets.Add(new StreetDef { ax = s.ax, ay = s.ay, bx = s.bx, by = s.by, ab = s.ab, ba = s.ba });
             c.demand = new DemandSpec { preset = demand.preset, total = demand.total, rush = demand.rush };
+            foreach (var a in demand.arms) c.demand.arms.Add(new ArmWeight { gx = a.gx, gy = a.gy, dir = a.dir, weight = a.weight });
             foreach (var o in ops) c.ops.Add(o.Clone());
             return c;
         }

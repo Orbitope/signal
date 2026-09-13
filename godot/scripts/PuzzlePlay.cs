@@ -33,7 +33,7 @@ namespace SignalGodot
         private Label _title, _sub, _intro, _hintLabel, _budget, _error, _status, _verdict, _tutorial;
         private PanelContainer _tutorialBox;
         private VBoxContainer _objRows, _opsRows;
-        private HBoxContainer _buildButtons, _runButtons, _doneButtons;
+        private HBoxContainer _buildButtons, _runButtons, _doneButtons, _stopRow;
         private Button _run, _reveal;
         private readonly List<Label> _objLabels = new();
         private ToolPopup _popup;
@@ -138,7 +138,7 @@ namespace SignalGodot
             _result = PuzzleScorer.Evaluate(_p, _sol.Ops);
             if (_result.Error != null) { ShowError("Can't run: " + _result.Error + "."); return; }
             App.Runner.Reset();
-            App.Runner.TimeScale = 2f;
+            App.Runner.TimeScale = 4f;
             _state = State.Running;
             _popup.Close();
             RefreshPanel();
@@ -228,10 +228,19 @@ namespace SignalGodot
             _reveal.Visible = false;
             col.AddChild(_reveal);
 
-            _runButtons = Ui.Row(8);
-            _runButtons.AddChild(Ui.Button("Faster", () => App.Runner.TimeScale = App.Runner.TimeScale >= 8f ? 2f : 8f));
-            _runButtons.AddChild(Ui.Button("Stop and edit", BackToBuild));
+            _runButtons = Ui.Row(6);
+            foreach (var sp in new[] { 1f, 4f, 16f, 64f })
+            {
+                float speed = sp;
+                var b = Ui.Button($"{sp:F0}x", () => App.Runner.TimeScale = speed, size: Ui.Small + 1);
+                b.CustomMinimumSize = new Vector2(56, Ui.ButtonHeight);
+                _runButtons.AddChild(b);
+            }
+            _runButtons.AddChild(Ui.Button("Finish", () => App.Runner.FinishNow(), primary: true, size: Ui.Small + 1));
             col.AddChild(_runButtons);
+            _stopRow = Ui.Row(8);
+            _stopRow.AddChild(Ui.Button("Stop and edit", BackToBuild));
+            col.AddChild(_stopRow);
 
             _doneButtons = Ui.Row(8);
             _doneButtons.AddChild(Ui.Button("Next puzzle", NextPuzzle, primary: true));
@@ -243,7 +252,7 @@ namespace SignalGodot
             nav.AddChild(Ui.Button("All puzzles", () => App.ShowPuzzleList()));
             nav.AddChild(Ui.Button("Menu", () => App.ShowMenu()));
             col.AddChild(nav);
-            col.AddChild(Ui.Label("Click a junction or a street to change it · wheel zoom · drag pan · F fit", Ui.Small, Orbitope.TextMuted, null, wrap: true, width: WrapWidth));
+            col.AddChild(Ui.Label("Click a junction or a street to change it · Enter runs or finishes · 1/2/4/8/9 speed · wheel zoom · drag pan · F fit", Ui.Small, Orbitope.TextMuted, null, wrap: true, width: WrapWidth));
 
             var host = new Control { MouseFilter = Control.MouseFilterEnum.Ignore };
             host.SetAnchorsPreset(Control.LayoutPreset.FullRect);
@@ -307,6 +316,7 @@ namespace SignalGodot
 
             _buildButtons.Visible = _state == State.Build;
             _runButtons.Visible = _state == State.Running;
+            _stopRow.Visible = _state == State.Running;
             _doneButtons.Visible = _state == State.Done;
             _reveal.Visible = _state == State.Build && _fails >= 2 && _p.answer != null && _p.answer.Count > 0;
             _run.Disabled = left < 0;
@@ -420,7 +430,9 @@ namespace SignalGodot
                             case Key.Key1: App.Runner.TimeScale = 1f; break;
                             case Key.Key2: App.Runner.TimeScale = 2f; break;
                             case Key.Key4: App.Runner.TimeScale = 4f; break;
-                            case Key.Key8: App.Runner.TimeScale = 8f; break;
+                            case Key.Key8: App.Runner.TimeScale = 16f; break;
+                            case Key.Key9: App.Runner.TimeScale = 64f; break;
+                            case Key.Enter: App.Runner.FinishNow(); break;
                         }
                     else if (_state == State.Build && k.Keycode == Key.Enter) Run();
                     break;

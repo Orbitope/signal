@@ -113,7 +113,7 @@ namespace Signal.Core
             w.puzzles.Add(new PuzzleDef
             {
                 id = "w1-1", title = "Quiet crossroads",
-                intro = "A sleepy junction with a full traffic signal. Cars sit at red with nobody coming the other way. Find something cheaper that keeps them moving.",
+                intro = "A sleepy crossroads with a full traffic signal. Something cheaper would do, if you pick the right one.",
                 tutorial = "How to play: click the junction on the map, pick a tool from the list, then press Run. The AI drives the lights; you decide what gets built. Every goal has to hold on three separate runs.",
                 hint = "When traffic is light, stopping briefly beats waiting for a light to change.",
                 level = FourWay("Quiet crossroads", ControlType.Signalized, Balanced(8f)),
@@ -127,7 +127,7 @@ namespace Signal.Core
             w.puzzles.Add(new PuzzleDef
             {
                 id = "w1-2", title = "The busy hour",
-                intro = "Same crossroads, four times the traffic, and an all-way stop that can't keep up. Queues stretch back out of sight.",
+                intro = "Same crossroads, four times the traffic. The queues stretch back out of sight.",
                 hint = "A stop sign serves one car at a time. A signal serves a whole platoon.",
                 level = FourWay("The busy hour", ControlType.AllWayStop, Balanced(30f, left: 0.05f)),
                 toolbox = { Tools.AllWayStop(), Tools.TwoWayStop(), Tools.Signal() },
@@ -140,7 +140,7 @@ namespace Signal.Core
             w.puzzles.Add(new PuzzleDef
             {
                 id = "w1-3", title = "Round and round",
-                intro = "Moderate, even traffic from all four sides, and a signal that makes half of them wait at any moment. There is a better shape for this.",
+                intro = "Moderate, even traffic from all four sides, and a signal in the middle of it.",
                 hint = "When every direction is about equal, nobody has to stop for a light.",
                 level = FourWay("Round and round", ControlType.Signalized, Balanced(22f)),
                 toolbox = { Tools.AllWayStop(), Tools.TwoWayStop(), Tools.Signal(), Tools.Roundabout() },
@@ -153,7 +153,7 @@ namespace Signal.Core
             w.puzzles.Add(new PuzzleDef
             {
                 id = "w1-4", title = "One busy street",
-                intro = "The roundabout from last time, but now a river of traffic pours north to south. Cars from the other arms can't find a gap in the circle, and some wait for minutes.",
+                intro = "The roundabout from last time, but the traffic has changed: a river pours north to south now. Watch the other three arms.",
                 hint = "A roundabout is only fair when the flows are balanced. Something has to make the river stop now and then.",
                 level = FourWay("One busy street", ControlType.AllWayStop, DominantDemand(16f, 8f)),
                 initialOps = { new EditOp { kind = EditKind.Roundabout, node = Center } },
@@ -167,7 +167,7 @@ namespace Signal.Core
             w.puzzles.Add(new PuzzleDef
             {
                 id = "w1-5", title = "The side street",
-                intro = "A busy east-west road crossed by a quiet lane. The all-way stop makes the main road stop for nobody, over and over.",
+                intro = "A busy east-west road crossed by a quiet lane, and an all-way stop.",
                 hint = "Only one street needs to stop.",
                 level = FourWay("The side street", ControlType.AllWayStop, Mixed(1.5f, 7f, 1.5f, 7f)),
                 toolbox = { Tools.AllWayStop(), Tools.TwoWayStop(), Tools.Signal() },
@@ -180,7 +180,7 @@ namespace Signal.Core
             w.puzzles.Add(new PuzzleDef
             {
                 id = "w1-6", title = "Left behind",
-                intro = "An old light on a fixed cycle. Lots of drivers turn left here, and each one waits in the through lane for a gap that never comes, holding up everyone behind them.",
+                intro = "An old light on a fixed cycle, and a lot of drivers who want to turn left. Watch what happens to the cars behind them.",
                 hint = "Give the left-turners their own lane and their own green. Which two approaches have the left-turners?",
                 level = FourWay("Left behind", ControlType.Signalized, LeftHeavyDemand(0.715f)),
                 initialOps = { new EditOp { kind = EditKind.Retime, node = Center, cycle = 80f } },
@@ -194,7 +194,7 @@ namespace Signal.Core
             w.puzzles.Add(new PuzzleDef
             {
                 id = "w1-7", title = "Fair play",
-                intro = "Someone set this light to favour the main road: 85% of every cycle. The average wait looks fine. The side street is another story.",
+                intro = "Someone set this light to favour the main road: 85% of every cycle. The average wait looks fine.",
                 hint = "Remove the timed plan and the AI runs the light. Or find a split that treats both streets fairly.",
                 level = FourWay("Fair play", ControlType.Signalized, Mixed(3f, 11f, 3f, 11f, left: 0f, right: 0.2f)),
                 initialOps = { new EditOp { kind = EditKind.Retime, node = Center, cycle = 60f, splits = new List<float> { 0.15f, 0.85f } } },
@@ -207,7 +207,7 @@ namespace Signal.Core
             w.puzzles.Add(new PuzzleDef
             {
                 id = "w1-8", title = "Rush hour",
-                intro = "Quiet for the first few minutes, then the evening rush hits and the stop sign drowns. Whatever you build has to survive the peak.",
+                intro = "Quiet for the first few minutes. Then the evening rush arrives. Whatever you build has to survive the peak.",
                 hint = "Judge the junction by its worst ten minutes, not its best.",
                 level = FourWay("Rush hour", ControlType.AllWayStop,
                                 SymmetricCurve(new[] { 0f, 150f, 250f, 400f, 500f, 600f }, new[] { 6f, 6f, 30f, 30f, 6f, 6f }, left: 0.05f), 600f),
@@ -229,38 +229,20 @@ namespace Signal.Core
         {
             var w = new WorldDef
             {
-                id = "w2", title = "Two lights", unlockStars = 9,
-                blurb = "Junctions that affect each other. A queue at one light backs into the next, and the AI has to share the road."
+                id = "w2", title = "Networks", unlockStars = 9,
+                blurb = "Junctions that affect each other. Nothing here has one obvious answer: read where the traffic goes, then spend where it matters."
             };
 
-            // 1. Two junctions on a busy road with all-way stops.
-            {
-                var doc = Pair(spacing: 200f, preset: "east-west", total: 18f);
-                foreach (var j in doc.junctions) j.control = ControlType.AllWayStop;
-                w.puzzles.Add(new PuzzleDef
-                {
-                    id = "w2-1", title = "Two in a row",
-                    intro = "A busy road crosses two quiet streets a block apart, and someone put an all-way stop at both. The main road stops twice for nobody.",
-                    tutorial = "Two junctions now. Each one is clicked and changed on its own, and the price adds up.",
-                    hint = "The main road should keep priority at both junctions.",
-                    level = doc.BuildRaw(),
-                    toolbox = { Tools.AllWayStop(), Tools.TwoWayStop(), Tools.Signal() },
-                    budget = 80, par = 16,
-                    objectives = { Avg(8f), Max(70f) },
-                    answer = { new EditOp { kind = EditKind.SetControl, node = EditorDoc.JunctionId(2, 1), control = ControlType.TwoWayStop, majorAxis = 0 },
-                               new EditOp { kind = EditKind.SetControl, node = EditorDoc.JunctionId(3, 1), control = ControlType.TwoWayStop, majorAxis = 0 } },
-                });
-            }
-
-            // 2. The short block: two signals close together spill into each other.
+            // 1. The short block: two all-way stops close together spill into each other.
             {
                 var doc = Pair(spacing: 90f, preset: "east-west", total: 28f);
                 foreach (var j in doc.junctions) j.control = ControlType.AllWayStop;
                 w.puzzles.Add(new PuzzleDef
                 {
-                    id = "w2-2", title = "The short block",
-                    intro = "Two all-way stops only a few car-lengths apart. Every car that stops at the second one backs into the first, and the block locks solid.",
-                    hint = "The main road must never have to stop between the two. Give it priority at both.",
+                    id = "w2-1", title = "The short block",
+                    intro = "Two junctions only a few car-lengths apart. Watch the block between them.",
+                    hint = "Whatever stops at the second junction backs into the first. The main road must not have to stop between them.",
+                    tutorial = "Two junctions now. Each one is clicked and changed on its own, and the prices add up.",
                     level = doc.BuildRaw(),
                     toolbox = { Tools.AllWayStop(), Tools.TwoWayStop(), Tools.Signal(), Tools.TimedPlan() },
                     budget = 40, par = 16,
@@ -270,31 +252,88 @@ namespace Signal.Core
                 });
             }
 
-            // 3. Overbuilt: four signals on a quiet block; stops with the right priority flow better.
+            // 2. The busy corner: only one junction needs the expensive fix, and the budget allows exactly one.
             {
-                var doc = Block(preset: "east-west", total: 20f);
-                var p = new PuzzleDef
+                var doc = Block(preset: "balanced", total: 18f);
+                doc.demand.Weigh(3, 1, 0, 7f).Weigh(3, 1, 1, 7f).Weigh(2, 2, 3, 0.3f).Weigh(2, 2, 2, 0.3f).Weigh(2, 1, 0, 0.3f).Weigh(3, 2, 2, 0.3f);
+                foreach (var j in doc.junctions) j.control = ControlType.AllWayStop;
+                w.puzzles.Add(new PuzzleDef
                 {
-                    id = "w2-3", title = "Overbuilt",
-                    intro = "A quiet block with a full traffic signal on every corner. At this volume the lights make everyone wait for nobody. Find something cheaper and quicker.",
-                    hint = "Which way does most of the traffic go? Let that street keep priority at every corner.",
+                    id = "w2-2", title = "The busy corner",
+                    intro = "A block of four all-way stops. The traffic is not spread evenly, and neither is your money.",
+                    hint = "Run it once and watch which corner the queues form at. That corner needs more than a stop sign; the rest may not need anything.",
                     level = doc.BuildRaw(),
-                    toolbox = { Tools.TwoWayStop(), Tools.AllWayStop(), Tools.Signal() },
-                    budget = 40, par = 32,
-                    objectives = { Avg(12f) },
-                };
-                foreach (var j in doc.junctions)
-                    p.answer.Add(new EditOp { kind = EditKind.SetControl, node = EditorDoc.JunctionId(j.gx, j.gy), control = ControlType.TwoWayStop, majorAxis = 0 });
-                w.puzzles.Add(p);
+                    toolbox = { Tools.AllWayStop(), Tools.TwoWayStop(), Tools.Signal(), Tools.Roundabout() },
+                    budget = 60, par = 40,
+                    objectives = { Avg(12f), Max(70f) },
+                    answer = { new EditOp { kind = EditKind.SetControl, node = EditorDoc.JunctionId(3, 1), control = ControlType.Signalized } },
+                });
             }
 
-            // 4. Starved side streets along an arterial on timed plans.
+            // 3. Two busy corners: the cheapest fix is at the QUIET corners.
+            {
+                var doc = Block(preset: "balanced", total: 16f);
+                doc.demand.Weigh(3, 1, 0, 5f).Weigh(3, 1, 1, 5f).Weigh(2, 2, 3, 5f).Weigh(2, 2, 2, 5f).Weigh(2, 1, 0, 0.3f).Weigh(2, 1, 3, 0.3f).Weigh(3, 2, 1, 0.3f).Weigh(3, 2, 2, 0.3f);
+                foreach (var j in doc.junctions) j.control = ControlType.AllWayStop;
+                w.puzzles.Add(new PuzzleDef
+                {
+                    id = "w2-3", title = "Two busy corners",
+                    intro = "Two corners of this block carry most of the traffic; the other two barely see a car. Every corner is an all-way stop. Twenty dollars will do it, if you spend them in the right place.",
+                    hint = "The busy corners are not where the money goes. What is holding the cars up is the stops they hit on the way through the quiet corners.",
+                    level = doc.BuildRaw(),
+                    toolbox = { Tools.AllWayStop(), Tools.TwoWayStop(), Tools.Signal() },
+                    budget = 40, par = 16,
+                    objectives = { Avg(13f), Max(65f) },
+                    answer = { new EditOp { kind = EditKind.SetControl, node = EditorDoc.JunctionId(2, 2), control = ControlType.TwoWayStop, majorAxis = 0 },
+                               new EditOp { kind = EditKind.SetControl, node = EditorDoc.JunctionId(3, 1), control = ControlType.TwoWayStop, majorAxis = 0 } },
+                });
+            }
+
+            // 4. Four in a row: one signal, placed right, and one junction left alone.
+            {
+                var doc = Row(4, spacing: 200f, preset: "east-west", total: 24f);
+                doc.demand.Weigh(1, 1, 0, 3f).Weigh(1, 1, 2, 3f).Weigh(3, 1, 0, 3f).Weigh(3, 1, 2, 3f)
+                          .Weigh(2, 1, 0, 0.25f).Weigh(2, 1, 2, 0.25f).Weigh(4, 1, 0, 0.25f).Weigh(4, 1, 2, 0.25f);
+                foreach (var j in doc.junctions) j.control = ControlType.AllWayStop;
+                w.puzzles.Add(new PuzzleDef
+                {
+                    id = "w2-4", title = "Four in a row",
+                    intro = "A long main road with four cross streets, all of them all-way stops. You can afford one signal. Where, and what happens to the other three, is the whole puzzle.",
+                    hint = "Two of the cross streets are busy, but only the first one needs the signal. And not every corner is better off changed.",
+                    level = doc.BuildRaw(),
+                    toolbox = { Tools.AllWayStop(), Tools.TwoWayStop(), Tools.Signal() },
+                    budget = 70, par = 56,
+                    objectives = { Avg(14f), Max(75f) },
+                    answer = { new EditOp { kind = EditKind.SetControl, node = EditorDoc.JunctionId(1, 1), control = ControlType.Signalized },
+                               new EditOp { kind = EditKind.SetControl, node = EditorDoc.JunctionId(2, 1), control = ControlType.TwoWayStop, majorAxis = 0 },
+                               new EditOp { kind = EditKind.SetControl, node = EditorDoc.JunctionId(3, 1), control = ControlType.TwoWayStop, majorAxis = 0 } },
+                });
+            }
+
+            // 5. Rush hour, twice.
+            {
+                var doc = Pair(spacing: 200f, preset: "balanced", total: 15f, rush: true, duration: 600f);
+                foreach (var j in doc.junctions) j.control = ControlType.AllWayStop;
+                w.puzzles.Add(new PuzzleDef
+                {
+                    id = "w2-5", title = "Rush hour, twice",
+                    intro = "Two all-way stops and an evening peak. Judge your answer by the worst ten minutes, not the first five.",
+                    hint = "Stops serve one car at a time; lights serve platoons. You may not need to fix both junctions the same way, and one roundabout can be enough.",
+                    level = doc.BuildRaw(),
+                    toolbox = { Tools.AllWayStop(), Tools.TwoWayStop(), Tools.Signal(), Tools.Roundabout() },
+                    budget = 120, par = 60,
+                    objectives = { Avg(30f), Max(90f) },
+                    answer = { new EditOp { kind = EditKind.Roundabout, node = EditorDoc.JunctionId(3, 1) } },
+                });
+            }
+
+            // 6. Three timed lights: fairness across a row.
             {
                 var doc = Row(3, spacing: 200f, preset: "east-west", total: 22f);
                 var p = new PuzzleDef
                 {
-                    id = "w2-4", title = "Three timed lights",
-                    intro = "Three lights on the main road, each on a fixed plan that gives the side streets 15% of the cycle. Fast for the main road, brutal for everyone else.",
+                    id = "w2-6", title = "Three timed lights",
+                    intro = "Three lights on the main road, each on a fixed plan someone tuned for the main road. The side streets have opinions.",
                     hint = "The AI shares time by need. Remove the plans, or set fairer splits.",
                     level = doc.BuildRaw(),
                     toolbox = { Tools.TimedPlan(), Tools.Signal() },
@@ -306,32 +345,14 @@ namespace Signal.Core
                 w.puzzles.Add(p);
             }
 
-            // 5. Rush hour on the pair.
-            {
-                var doc = Pair(spacing: 200f, preset: "balanced", total: 15f, rush: true, duration: 600f);
-                foreach (var j in doc.junctions) j.control = ControlType.AllWayStop;
-                w.puzzles.Add(new PuzzleDef
-                {
-                    id = "w2-5", title = "Rush hour, twice",
-                    intro = "Two all-way stops that cope until the evening peak, then drown together. Whatever you build has to hold for the worst ten minutes.",
-                    hint = "Stops serve one car at a time; lights serve platoons. You may not need to fix both junctions the same way.",
-                    level = doc.BuildRaw(),
-                    toolbox = { Tools.AllWayStop(), Tools.TwoWayStop(), Tools.Signal(), Tools.Roundabout() },
-                    budget = 120, par = 80,
-                    objectives = { Avg(30f), Max(90f) },
-                    answer = { new EditOp { kind = EditKind.SetControl, node = EditorDoc.JunctionId(2, 1), control = ControlType.Signalized },
-                               new EditOp { kind = EditKind.SetControl, node = EditorDoc.JunctionId(3, 1), control = ControlType.Signalized } },
-                });
-            }
-
-            // 6. Two roundabouts, balanced traffic.
+            // 7. Two roundabouts.
             {
                 var doc = Pair(spacing: 200f, preset: "balanced", total: 26f);
                 w.puzzles.Add(new PuzzleDef
                 {
-                    id = "w2-6", title = "Round and round, twice",
-                    intro = "Two signals a block apart with even traffic from every side. You have the money for a roundabout at each. Is it worth it at both?",
-                    hint = "Balanced flows love a roundabout. Try one first and watch what happens at the other junction.",
+                    id = "w2-7", title = "Round and round, twice",
+                    intro = "Two signals a block apart with even traffic from every side, and money for two roundabouts. Is it worth it at both?",
+                    hint = "Try one first and watch what happens at the other junction.",
                     level = doc.BuildRaw(),
                     toolbox = { Tools.AllWayStop(), Tools.TwoWayStop(), Tools.Signal(), Tools.Roundabout() },
                     budget = 120, par = 120,

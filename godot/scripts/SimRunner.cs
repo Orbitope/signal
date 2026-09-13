@@ -87,6 +87,18 @@ namespace SignalGodot
             Snapshot(_prev);
         }
 
+        /// <summary>Run the rest of the round right now (the result is what the
+        /// scorer already computed; this just gets the picture there).</summary>
+        public void FinishNow()
+        {
+            if (Sim == null || Finished) return;
+            int guard = 200000;
+            while (Sim.Time < Level.duration && guard-- > 0) { Sim.Step(); Ghost?.Step(); }
+            Snapshot(_curr); _prev.Clear(); foreach (var kv in _curr) _prev[kv.Key] = kv.Value;
+            Alpha = 0f; Finished = true;
+            CallDeferred(Godot.Node.MethodName.EmitSignal, SignalName.FinishedRound);
+        }
+
         /// <summary>No level loaded: views draw nothing.</summary>
         public void Clear()
         {
@@ -104,7 +116,7 @@ namespace SignalGodot
 
             // Cap catch-up work per frame so a hitch can't spiral; at high time
             // scales the cap is what bounds frame time, not the accumulator.
-            int safety = TimeScale >= 8f ? 120 : 30;
+            int safety = Mathf.Max(30, Mathf.CeilToInt(TimeScale * 4f));
             while (_accumulator >= SimConfig.DT && safety-- > 0)
             {
                 _accumulator -= SimConfig.DT;

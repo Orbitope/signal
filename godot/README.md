@@ -16,7 +16,7 @@ godot --headless --path . --import
 
 - **Menu** (`Menu.cs`) — home and the puzzle list with stars.
 - **Puzzles** (`PuzzlePlay.cs`, GAME_PLAN P1) — World 1 (eight one-junction
-  puzzles) and World 2 (six two-light puzzles) from `Signal.Core.Worlds`, plus
+  puzzles) and World 2 "Networks" (seven multi-junction puzzles) from `Signal.Core.Worlds`, plus
   anything exported from the editor. Left panel: the brief, goals, money, your
   changes, Run. Click the junction or an approach on the map for the tools
   this puzzle allows, each with a price. Run scores every seed instantly and
@@ -34,7 +34,7 @@ godot --headless --path . --import
 - **Sandbox** (`Sandbox.cs`, GAME_PLAN P0) — any built-in level from
   `Signal.Core.Levels` or a LevelDef JSON via `--level=path.json`. The game AI
   drives every light; tap an approach to hold it green for 12 s; beat the
-  lockstep AI ghost. Keys: space pause · 1/2/4 speed · R restart · [ ] level.
+  lockstep AI ghost. Keys: space pause · 1/2/4/8/9 speed (1x to 64x) · R restart · [ ] level.
 - Everywhere: wheel zoom · middle/right-drag or WASD pan · F fit ·
   **ctrl+= / ctrl+- scale the whole UI** (saved) · Esc to the menu.
 
