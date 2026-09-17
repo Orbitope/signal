@@ -324,8 +324,12 @@ of the map a morning peak and flows away from it an afternoon peak; the cheap
 priority fix passes one tide and fails the other).
 
 *Brainstorm, not yet built (each maps to sim primitives that exist):*
-- **The bridge**: a single two-lane link every route must use (bottleneck, a
-  spillback goal, timed plans that meter the approaches).
+- **The bridge** (attempted 2026-09-17, cut): a single link every crossing
+  trip must use, bank junctions as valves. In this sim the queue spreads the
+  difficulty across all eight bank junctions rather than concentrating at the
+  two ends, so the cheapest solver is a fiddly 8-junction tuning with no clean
+  teachable answer. Needs either a metering primitive (a ramp meter that
+  releases N cars per green) or a much smaller two-junction framing.
 - **Bus lane / priority street**: an arm with a fixed flow that must keep a
   max-wait goal while the rest of the map is saturated.
 - **Roadworks**: a street closed mid-round (needs a time-varying network; not
