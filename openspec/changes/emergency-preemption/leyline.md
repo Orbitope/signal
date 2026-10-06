@@ -83,4 +83,49 @@ Signals treat every vehicle alike. A fire engine waits at a red like any car. Pr
 ## Before implementation
 
 Nothing blocks implementation: every task is tied to code, every must-edit is covered, and every scenario has a test or is marked to be written.
+
+## 4. Was it done as agreed
+
+**Not yet:** 1 edits are outside the spec.
+
+| Task | Result | Missing |
+| --- | --- | --- |
+| 1.1 Add `Vehicle.IsEmergency`, false by default | done |  |
+| 1.2 Add `DemandSource.EmergencyQueues`, one queue per origin, created on f | done |  |
+| 1.3 Add `DemandSource.SpawnEmergency`, which routes an emergency vehicle a | done |  |
+| 1.4 Change `DemandSource.Tick` to release the head of each emergency queue | done |  |
+| 1.5 Change `DemandSource.HeldCount` to count vehicles in the emergency que | done |  |
+| 1.6 Add `Simulation.EmergencyCount`, raised by `Simulation.SpawnEmergency` | done |  |
+| 1.7 Add `Simulation.SpawnEmergency`, which calls the demand source and ret | done |  |
+| 2.1 Add `SignalController.PreemptDistance`, 250 metres by default; zero sw | done |  |
+| 2.2 Add `SignalController.Preempting`, true while an emergency vehicle is  | done |  |
+| 2.3 Add `SignalController.PreemptPhase`, which returns the phase to serve  | done |  |
+| 2.4 Change `SignalController.Tick` to check for preemption every tick when | done |  |
+| 2.5 Change `SignalController.RequestPhase` to ignore requests from outside | done |  |
+| 3.1 Add the test "preemption lets an emergency vehicle through a signal he | done |  |
+| 3.2 Add the test "preemption ends once the emergency vehicle has passed" | done |  |
+| 3.3 Add the test "preemption overrules requests made while it is in force" | done |  |
+| 3.4 Add the test "signals with no emergency vehicle nearby keep following  | done |  |
+| 3.5 Add the test "preemption keeps min-green, yellow and all-red" | done |  |
+| 3.6 Add the test "an emergency vehicle enters ahead of cars held at a back | done |  |
+| 3.7 Add the test "spawning an emergency vehicle with no route returns null | done |  |
+| 3.8 Add the test "a run with no emergency vehicle has the same state hash  | done |  |
+| 3.9 Add the test "an emergency vehicle in the network keeps at least 75% o | done |  |
+
+| Scenario | Result | Evidence |
+| --- | --- | --- |
+| preemption lets an emergency vehicle through a signal held red | passes | its test reaches the changed code on the map |
+| preemption ends once the emergency vehicle has passed | passes | its test reaches the changed code on the map |
+| preemption overrules requests made while it is in force | passes | its test reaches the changed code on the map |
+| signals with no emergency vehicle nearby keep following their policy | passes | its test reaches the changed code on the map |
+| preemption keeps min-green, yellow and all-red | passes | its test reaches the changed code on the map |
+| an emergency vehicle enters ahead of cars held at a backed-up entrance | passes | its test reaches the changed code on the map |
+| spawning an emergency vehicle with no route returns null and changes nothing | passes | its test reaches the changed code on the map |
+| a run with no emergency vehicle has the same state hash as before the change | passes | its test reaches the changed code on the map |
+| an emergency vehicle in the network keeps at least 75% of the step rate | passes | its test reaches the changed code on the map |
+
+**Changed, but not in the spec:**
+- SignalController.SetPending (new, not declared in the proposal) Signal.Core/Controls.cs
+
+Tests: 24 of 24 passed before, 33 of 33 after.
 <!-- leyline:end -->
