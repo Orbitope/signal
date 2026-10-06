@@ -22,6 +22,7 @@ namespace Signal.Core
         public float Wait;         // cumulative seconds below WaitSpeed
         public float SpawnTime;
         public bool HasStopped;    // has come to a full stop at the current stop line (stop-sign logic)
+        public bool IsEmergency;   // signals preempt for it (see SignalController.PreemptPhase)
 
         public int CurrentLink => Route[RouteIdx];
         public bool OnLastLink => RouteIdx == Route.Length - 1;

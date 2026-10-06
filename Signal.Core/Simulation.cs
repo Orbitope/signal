@@ -37,6 +37,9 @@ namespace Signal.Core
         public readonly Metrics Metrics = new Metrics();
         public float Time { get; private set; }
         public long StepCount { get; private set; }
+        /// <summary>Emergency vehicles that exist: held at an entrance or on a link.
+        /// Signal controllers look for one only while this is above zero.</summary>
+        public int EmergencyCount { get; private set; }
 
         // Events for the presentation layer (never used by Core logic).
         public event Action<Vehicle> VehicleSpawned;
@@ -97,6 +100,16 @@ namespace Signal.Core
         public SignalController ControllerAt(int nodeId) => Network.NodeById(nodeId).Control as SignalController;
 
         internal void OnVehicleSpawned(Vehicle v) => VehicleSpawned?.Invoke(v);
+
+        /// <summary>Spawn an emergency vehicle from `origin` to `dest`. It enters
+        /// ahead of any cars held at that entrance. Returns the vehicle, or null
+        /// when there is no route.</summary>
+        public Vehicle SpawnEmergency(int origin, int dest)
+        {
+            var v = Demand.SpawnEmergency(this, origin, dest);
+            if (v != null) EmergencyCount++;
+            return v;
+        }
 
         // =================================================================
         //  The step. Fixed order, fixed DT — this ordering IS the contract
@@ -263,6 +276,7 @@ namespace Signal.Core
                     Metrics.Completed++;
                     Metrics.CompletedWaitSum += v.Wait;
                     Metrics.CompletedTravelSum += Time - v.SpawnTime;
+                    if (v.IsEmergency) EmergencyCount--;
                     VehicleDespawned?.Invoke(v);
                     continue;
                 }

@@ -22,6 +22,10 @@ namespace Signal.Core
         public float RateMultiplier = 1f;   // DemandRandomizer hook for training
 
         public readonly Dictionary<int, Queue<Vehicle>> EntryQueues = new Dictionary<int, Queue<Vehicle>>();
+        /// <summary>Emergency vehicles waiting to enter, per origin. A queue is
+        /// created the first time an emergency vehicle is spawned at that origin,
+        /// and its head is released before the ordinary queue for the origin.</summary>
+        public readonly Dictionary<int, Queue<Vehicle>> EmergencyQueues = new Dictionary<int, Queue<Vehicle>>();
 
         public DemandSource(DemandDef def, Router router, Rng rng)
         {
@@ -29,6 +33,25 @@ namespace Signal.Core
             foreach (var f in def.flows)
                 if (!EntryQueues.ContainsKey(f.origin))
                     EntryQueues[f.origin] = new Queue<Vehicle>();
+        }
+
+        /// <summary>Route an emergency vehicle and put it in the emergency queue
+        /// for its origin. Returns null (and changes nothing) when there is no
+        /// route. Draws nothing from the Rng.</summary>
+        public Vehicle SpawnEmergency(Simulation sim, int origin, int dest)
+        {
+            if (!sim.Network.TryNode(origin, out _)) return null;
+            var route = _router.Route(origin, dest);
+            if (route == null) return null;
+            if (!EmergencyQueues.TryGetValue(origin, out var q))
+                EmergencyQueues[origin] = q = new Queue<Vehicle>();
+            var v = new Vehicle
+            {
+                Id = _nextVehId++, Route = route, RouteIdx = 0,
+                Pos = 0f, Speed = 0f, SpawnTime = sim.Time, IsEmergency = true
+            };
+            q.Enqueue(v);
+            return v;
         }
 
         public void Tick(Simulation sim, float dt)
@@ -48,6 +71,31 @@ namespace Signal.Core
                         Id = _nextVehId++, Route = route, RouteIdx = 0,
                         Pos = 0f, Speed = 0f, SpawnTime = sim.Time
                     });
+                }
+            }
+
+            // 2a) Emergency queues go first: an emergency vehicle that takes the
+            //     entry space leaves none for the ordinary head behind it this tick.
+            if (EmergencyQueues.Count > 0)
+            {
+                foreach (var kv in EmergencyQueues)
+                {
+                    var q = kv.Value;
+                    if (q.Count == 0) continue;
+                    var v = q.Peek();
+                    var link = sim.Network.LinkById(v.Route[0]);
+                    if (link.HasEntrySpace(v.Length))
+                    {
+                        q.Dequeue();
+                        v.Pos = v.Length;
+                        v.Speed = Math.Min(link.SpeedLimit * 0.5f, 8f);
+                        link.Vehicles.Add(v);
+                        sim.OnVehicleSpawned(v);
+                    }
+                    else
+                    {
+                        foreach (var w in q) w.Wait += dt;
+                    }
                 }
             }
 
@@ -77,7 +125,9 @@ namespace Signal.Core
 
         public int HeldCount()
         {
-            int n = 0; foreach (var kv in EntryQueues) n += kv.Value.Count; return n;
+            int n = 0; foreach (var kv in EntryQueues) n += kv.Value.Count;
+            foreach (var kv in EmergencyQueues) n += kv.Value.Count;
+            return n;
         }
 
         public void AccumulateHeldWait(ref float sum, ref int count)

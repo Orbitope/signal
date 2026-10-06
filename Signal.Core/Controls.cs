@@ -97,6 +97,13 @@ namespace Signal.Core
         private float _decisionTimer;
         private int _pendingPhase = -1;
 
+        /// <summary>How far up each incoming link the controller looks for an
+        /// emergency vehicle (m). Zero switches preemption off.</summary>
+        public float PreemptDistance = 250f;
+        /// <summary>True while an emergency vehicle within PreemptDistance on an
+        /// incoming link is being given its phase. Updated every Tick.</summary>
+        public bool Preempting { get; private set; }
+
         // Cached per-phase movement permission (rebuilt on phase entry).
         private bool[] _allowed;       // movement index -> allowed in current green
         private bool[] _permissive;    // movement index -> needs gap acceptance
@@ -127,6 +134,12 @@ namespace Signal.Core
         /// (or whether) to honor it. Safety envelope lives here, not in policies.</summary>
         public void RequestPhase(int phase)
         {
+            if (Preempting) return;   // preemption overrules requests from outside
+            SetPending(phase);
+        }
+
+        private void SetPending(int phase)
+        {
             if (phase == CurrentPhase && State == SignalState.Green) { _pendingPhase = -1; return; }
             if (phase < 0 || phase >= Phases.Count) return;
             _pendingPhase = phase;
@@ -136,13 +149,19 @@ namespace Signal.Core
         {
             TimeInState += dt; TimeInPhase += dt;
 
-            if (Policy != null && State == SignalState.Green)
+            int preempt = sim.EmergencyCount > 0 ? PreemptPhase(sim, node) : -1;
+            Preempting = preempt >= 0;
+            if (preempt >= 0)
+            {
+                SetPending(preempt);
+            }
+            else if (Policy != null && State == SignalState.Green)
             {
                 _decisionTimer -= dt;
                 if (_decisionTimer <= 0f)
                 {
                     _decisionTimer = DecisionInterval;
-                    RequestPhase(Policy.SelectPhase(sim, node, this));
+                    SetPending(Policy.SelectPhase(sim, node, this));
                 }
             }
 
@@ -166,6 +185,43 @@ namespace Signal.Core
                     }
                     break;
             }
+        }
+
+        /// <summary>The phase to serve for the nearest emergency vehicle within
+        /// PreemptDistance of the stop line on an incoming link (tie: lower link
+        /// id): the first phase that serves its movement as protected, else the
+        /// first that serves it as permissive. -1 when there is no such vehicle,
+        /// it has no next link, or no phase serves it.</summary>
+        public int PreemptPhase(Simulation sim, Node node)
+        {
+            if (PreemptDistance <= 0f) return -1;
+            Vehicle nearest = null; int nearestLink = -1; float nearestDist = float.MaxValue;
+            for (int i = 0; i < node.InLinks.Count; i++)
+            {
+                var link = sim.Network.LinkById(node.InLinks[i]);
+                var vehicles = link.Vehicles;
+                for (int j = 0; j < vehicles.Count; j++)     // front-first: nearest the line first
+                {
+                    var v = vehicles[j];
+                    float dist = link.Length - v.Pos;
+                    if (dist > PreemptDistance || dist > nearestDist) break;
+                    if (!v.IsEmergency) continue;
+                    if (dist < nearestDist || link.Id < nearestLink)
+                    { nearest = v; nearestLink = link.Id; nearestDist = dist; }
+                    break;
+                }
+            }
+            if (nearest == null || nearest.OnLastLink) return -1;
+            var m = node.FindMovement(nearestLink, nearest.NextLink);
+            if (m == null) return -1;
+            int permissive = -1;
+            for (int p = 0; p < Phases.Count; p++)
+            {
+                if (!Phases[p].movements.Contains(m.Index)) continue;
+                if (!Phases[p].permissive.Contains(m.Index)) return p;
+                if (permissive < 0) permissive = p;
+            }
+            return permissive;
         }
 
         /// <summary>Presentation only: is movement `i` being served a green right

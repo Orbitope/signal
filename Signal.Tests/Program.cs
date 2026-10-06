@@ -366,6 +366,247 @@ class Program
             T.Assert(r.Error == null && pb.toolbox.Count == 2 && pb.level.network.links.Count == p.level.network.links.Count, r.Error ?? "puzzle round-trip");
         });
 
+        Console.WriteLine("== Emergency preemption ==");
+        {
+            // Four-way with no ordinary traffic. Phase 0 serves north-south,
+            // phase 1 east-west; the emergency vehicle runs east to west.
+            Simulation MakeEmpty() => new Simulation(new LevelDef
+                { network = NetworkBuilder.FourWay(ControlType.Signalized), demand = new DemandDef() }, 1);
+
+            T.Run("preemption lets an emergency vehicle through a signal held red", () =>
+            {
+                Vehicle Run(float preemptDistance, out Simulation sim, out bool left)
+                {
+                    sim = MakeEmpty();
+                    var ctl = sim.ControllerAt(0);
+                    ctl.PreemptDistance = preemptDistance;
+                    ctl.Policy = new ExternalPolicy();           // holds phase 0: north-south green
+                    var ev = sim.SpawnEmergency(NetworkBuilder.E, NetworkBuilder.W);
+                    T.Assert(ev != null && ev.IsEmergency, "emergency vehicle not spawned");
+                    bool gone = false;
+                    sim.VehicleDespawned += v => { if (v == ev) gone = true; };
+                    for (int i = 0; i < 900; i++) sim.Step();
+                    left = gone;
+                    return ev;
+                }
+                Run(250f, out var a, out bool leftA);
+                T.Assert(leftA && a.EmergencyCount == 0, "with preemption the emergency vehicle should leave the network");
+
+                var evB = Run(0f, out var b, out bool leftB);
+                var inLink = b.Network.LinkById(2);
+                T.Assert(!leftB && b.EmergencyCount == 1, "with preemption off the emergency vehicle should not get through");
+                T.Assert(inLink.Front == evB && inLink.Length - evB.Pos < 5f && evB.Speed < 0.1f,
+                    $"expected it waiting at the stop line, {inLink.Length - evB.Pos:F1}m away at {evB.Speed:F1} m/s");
+                T.Assert(b.ControllerAt(0).CurrentPhase == 0 && !b.ControllerAt(0).Preempting, "signal should still be held on phase 0");
+            });
+
+            T.Run("preemption ends once the emergency vehicle has passed", () =>
+            {
+                var sim = MakeEmpty();
+                var ctl = sim.ControllerAt(0);
+                var ev = sim.SpawnEmergency(NetworkBuilder.E, NetworkBuilder.W);
+                bool gone = false, preempted = false;
+                sim.VehicleDespawned += v => { if (v == ev) gone = true; };
+                for (int i = 0; i < 900 && !gone; i++) { sim.Step(); preempted |= ctl.Preempting; }
+                T.Assert(gone, "emergency vehicle never left the network");
+                T.Assert(preempted, "controller never preempted");
+                T.Assert(sim.EmergencyCount == 0, $"emergency count {sim.EmergencyCount}");
+                T.Assert(!ctl.Preempting, "controller still preempting");
+                T.Assert(ctl.CurrentPhase == 1 && ctl.State == SignalState.Green, "expected the east-west phase left green");
+                ctl.RequestPhase(0);
+                for (int i = 0; i < 150; i++) sim.Step();
+                T.Assert(ctl.CurrentPhase == 0 && ctl.State == SignalState.Green,
+                    $"outside request not honored: phase {ctl.CurrentPhase} {ctl.State}");
+            });
+
+            T.Run("preemption overrules requests made while it is in force", () =>
+            {
+                var sim = MakeEmpty();
+                var ctl = sim.ControllerAt(0);
+                var ev = sim.SpawnEmergency(NetworkBuilder.E, NetworkBuilder.W);
+                bool gone = false;
+                sim.VehicleDespawned += v => { if (v == ev) gone = true; };
+                int preemptTicks = 0, servedTicks = 0; bool serving = false;
+                for (int i = 0; i < 900 && !gone; i++)
+                {
+                    ctl.RequestPhase(0);                         // the outside caller wants north-south
+                    sim.Step();
+                    // Preempting is refreshed in the controller's tick, so on the step the
+                    // vehicle crosses the line it still reads true; only judge while it approaches.
+                    if (!ctl.Preempting || ev.RouteIdx > 0) { serving = false; continue; }
+                    preemptTicks++;
+                    T.Assert(ctl.PreemptPhase(sim, sim.Network.NodeById(0)) == 1, "preempt phase should be east-west");
+                    bool green = ctl.CurrentPhase == 1 && ctl.State == SignalState.Green;
+                    T.Assert(green || !serving, $"lost the emergency vehicle's green at t={sim.Time:F1}");
+                    if (green) { serving = true; servedTicks++; }
+                }
+                T.Assert(preemptTicks > 0 && servedTicks > 0, $"preempting {preemptTicks} ticks, serving {servedTicks}");
+                T.Assert(gone, "emergency vehicle never left the network");
+                T.Assert(ev.Wait < 1f, $"emergency vehicle was held up: waited {ev.Wait:F1}s");
+            });
+
+            T.Run("signals with no emergency vehicle nearby keep following their policy", () =>
+            {
+                Simulation Make()
+                {
+                    var sim = new Simulation(new LevelDef { network = NetworkBuilder.Arterial(3), demand = new DemandDef() }, 1);
+                    sim.ControllerAt(2).Policy = new FlapPolicy();
+                    return sim;
+                }
+                var a = Make(); var b = Make();                  // b is the same run with no emergency vehicle
+                var first = a.ControllerAt(0); var last = a.ControllerAt(2); var twin = b.ControllerAt(2);
+                // West end to the first signal's south stub: never on the last signal's incoming links.
+                T.Assert(a.SpawnEmergency(200, 400) != null, "no route");
+                int changes = 0, steps = 0; bool firstPreempted = false; int lastPhase = last.CurrentPhase;
+                while (a.EmergencyCount > 0 && steps < 2000)
+                {
+                    a.Step(); b.Step(); steps++;
+                    firstPreempted |= first.Preempting;
+                    T.Assert(!last.Preempting, "last signal preempting with no emergency vehicle on its links");
+                    T.Assert(last.CurrentPhase == twin.CurrentPhase && last.State == twin.State,
+                        $"last signal diverged from its policy at t={a.Time:F1}");
+                    if (last.CurrentPhase != lastPhase) { changes++; lastPhase = last.CurrentPhase; }
+                }
+                T.Assert(a.EmergencyCount == 0, "emergency vehicle never left");
+                T.Assert(firstPreempted, "first signal never preempted");
+                T.Assert(changes >= 2, $"last signal changed phase {changes} times while the emergency vehicle existed");
+            });
+
+            T.Run("preemption keeps min-green, yellow and all-red", () =>
+            {
+                var sim = MakeFourWay(ControlType.Signalized, 20, 7);
+                var ctl = sim.ControllerAt(0);
+                const float tol = 0.15f;
+                var state = ctl.State; int phase = ctl.CurrentPhase; int ticksInState = 0;
+                int changes = 0, preemptTicks = 0, spawned = 0;
+                for (int i = 0; i < 6000; i++)
+                {
+                    if (i % 70 == 0)                             // every 7s, from alternating streets
+                    {
+                        bool ns = (spawned++ % 2) == 0;
+                        sim.SpawnEmergency(ns ? NetworkBuilder.N : NetworkBuilder.E, ns ? NetworkBuilder.S : NetworkBuilder.W);
+                    }
+                    sim.Step();
+                    if (ctl.Preempting) preemptTicks++;
+                    if (ctl.State == state)
+                    {
+                        T.Assert(ctl.CurrentPhase == phase, $"phase changed without leaving {state} at t={sim.Time:F1}");
+                        ticksInState++;
+                        continue;
+                    }
+                    float held = ticksInState * SimConfig.DT;
+                    if (state == SignalState.Green)
+                    {
+                        T.Assert(ctl.State == SignalState.Yellow, $"green went to {ctl.State} at t={sim.Time:F1}");
+                        T.Assert(held >= ctl.MinGreen - tol, $"min green violated: {held:F1}s at t={sim.Time:F1}");
+                        T.Assert(ctl.CurrentPhase == phase, "phase changed on entering yellow");
+                    }
+                    else if (state == SignalState.Yellow)
+                    {
+                        T.Assert(ctl.State == SignalState.AllRed, $"yellow went to {ctl.State} at t={sim.Time:F1}");
+                        T.Assert(held >= ctl.YellowTime - tol, $"yellow cut short: {held:F1}s at t={sim.Time:F1}");
+                        T.Assert(ctl.CurrentPhase == phase, "phase changed on entering all-red");
+                    }
+                    else
+                    {
+                        T.Assert(ctl.State == SignalState.Green, $"all-red went to {ctl.State} at t={sim.Time:F1}");
+                        T.Assert(held >= ctl.AllRedTime - tol, $"all-red cut short: {held:F1}s at t={sim.Time:F1}");
+                        if (ctl.CurrentPhase != phase) changes++;
+                    }
+                    state = ctl.State; phase = ctl.CurrentPhase; ticksInState = 1;
+                }
+                T.Assert(preemptTicks > 0, "never preempted");
+                T.Assert(changes > 10, $"only {changes} phase changes");
+            });
+
+            T.Run("an emergency vehicle enters ahead of cars held at a backed-up entrance", () =>
+            {
+                var demand = new DemandDef();
+                demand.flows.Add(new OdFlowDef { origin = NetworkBuilder.N, dest = NetworkBuilder.S, rate = RateCurve.Constant(60) });
+                var sim = new Simulation(new LevelDef { network = NetworkBuilder.FourWay(ControlType.Signalized), demand = demand }, 4);
+                var ctl = sim.ControllerAt(0);
+                ctl.RequestPhase(1);                             // hold the north approach red so it backs up
+                var held = sim.Demand.EntryQueues[NetworkBuilder.N];
+                for (int i = 0; i < 3000 && held.Count < 3; i++) sim.Step();
+                T.Assert(held.Count >= 3, $"entrance never backed up ({held.Count} held)");
+
+                int heldBefore = sim.Demand.HeldCount();
+                var ev = sim.SpawnEmergency(NetworkBuilder.N, NetworkBuilder.S);
+                T.Assert(ev != null, "no route");
+                T.Assert(sim.Demand.HeldCount() == heldBefore + 1, "held count should include the emergency vehicle");
+                var heldCars = new HashSet<Vehicle>(held);
+                var entered = new List<Vehicle>();
+                sim.VehicleSpawned += v => entered.Add(v);
+
+                ctl.RequestPhase(0);                             // let the road clear so there is room to enter
+                for (int i = 0; i < 1200 && entered.Count < 3; i++) sim.Step();
+                T.Assert(entered.Count >= 3, $"only {entered.Count} vehicles entered");
+                T.Assert(entered[0] == ev, "a held car entered before the emergency vehicle");
+                T.Assert(heldCars.Contains(entered[1]), "the held cars should follow it in");
+                T.Assert(ev.RouteIdx > 0 || sim.Network.LinkById(1).Vehicles.Contains(ev) || sim.EmergencyCount == 0,
+                    "emergency vehicle should have entered the first link");
+            });
+
+            T.Run("spawning an emergency vehicle with no route returns null and changes nothing", () =>
+            {
+                // One one-way link from node 1 to node 2: nothing leads from 2 back to 1.
+                var net = new NetworkDef();
+                net.nodes.Add(new NodeDef { id = 1, x = 0, y = 0, isBoundary = true });
+                net.nodes.Add(new NodeDef { id = 2, x = 100, y = 0, isBoundary = true });
+                net.links.Add(new LinkDef { id = 1, from = 1, to = 2, length = 100f });
+                var sim = new Simulation(new LevelDef { network = net, demand = new DemandDef() }, 1);
+                T.Assert(sim.SpawnEmergency(2, 1) == null, "expected null with no route");
+                T.Assert(sim.EmergencyCount == 0 && sim.Demand.HeldCount() == 0 && sim.Demand.EmergencyQueues.Count == 0,
+                    "a refused spawn changed state");
+                T.Assert(sim.SpawnEmergency(1, 2) != null, "the routable direction should spawn");
+                T.Assert(sim.SpawnEmergency(2, 1) == null, "expected null with no route");
+                T.Assert(sim.EmergencyCount == 1 && sim.Demand.HeldCount() == 1, $"count {sim.EmergencyCount}, held {sim.Demand.HeldCount()}");
+            });
+
+            T.Run("a run with no emergency vehicle has the same state hash as before the change", () =>
+            {
+                var sim = MakeFourWay(ControlType.Signalized, 20, 7);
+                var ctl = sim.ControllerAt(0);
+                for (int i = 0; i < 2000; i++) { sim.Step(); T.Assert(!ctl.Preempting, "preempting with no emergency vehicle"); }
+                T.Assert(sim.EmergencyCount == 0, "emergency count should stay zero");
+                T.Assert(sim.StateHash() == 1821680719510123714UL, $"state hash {sim.StateHash()} differs from main at 313ea68");
+            });
+
+            T.Run("an emergency vehicle in the network keeps at least 75% of the step rate", () =>
+            {
+                const int steps = 50000;
+                double Rate(bool emergency)
+                {
+                    var demand = new DemandDef();
+                    demand.flows.Add(new OdFlowDef { origin = 200, dest = 201, rate = RateCurve.Constant(20) });
+                    demand.flows.Add(new OdFlowDef { origin = 201, dest = 200, rate = RateCurve.Constant(15) });
+                    for (int i = 0; i < 3; i++)
+                        demand.flows.Add(new OdFlowDef { origin = 300 + i, dest = 400 + ((i + 1) % 3), rate = RateCurve.Constant(6) });
+                    var sim = new Simulation(new LevelDef { network = NetworkBuilder.Arterial(3), demand = demand }, 3);
+                    AttachFixed(sim);
+                    int present = 0;
+                    var sw = System.Diagnostics.Stopwatch.StartNew();
+                    for (int i = 0; i < steps; i++)
+                    {
+                        if (emergency && sim.EmergencyCount == 0) sim.SpawnEmergency(200, 201);
+                        sim.Step();
+                        if (sim.EmergencyCount > 0) present++;
+                    }
+                    sw.Stop();
+                    // A vehicle that leaves is replaced before the next step, so at most
+                    // the step it leaves on ends with none.
+                    if (emergency) T.Assert(present > steps * 0.95, $"emergency vehicle present on only {present}/{steps} steps");
+                    else T.Assert(present == 0, "baseline run had an emergency vehicle");
+                    return steps / sw.Elapsed.TotalSeconds;
+                }
+                // Best of three, interleaved, so a scheduling hiccup doesn't decide the result.
+                double without = 0, with = 0;
+                for (int r = 0; r < 3; r++) { without = Math.Max(without, Rate(false)); with = Math.Max(with, Rate(true)); }
+                Console.WriteLine($"        none: {without:N0} steps/sec | emergency always present: {with:N0} steps/sec ({with / without:P0})");
+                T.Assert(with >= without * 0.75, $"{with:N0} steps/sec with an emergency vehicle vs {without:N0} without");
+            });
+        }
+
         Console.WriteLine("== Learned policy port ==");
         foreach (var fix in System.IO.Directory.GetFiles("../godot/policies", "*.parity.json"))
         {
