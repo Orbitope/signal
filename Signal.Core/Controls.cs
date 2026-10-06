@@ -142,7 +142,7 @@ namespace Signal.Core
                 if (_decisionTimer <= 0f)
                 {
                     _decisionTimer = DecisionInterval;
-                    RequestPhase(Policy.SelectPhase(sim, node, this));
+                    RequestPhase(Policy.SelectPhase(new PolicyContext(sim, node, this)));
                 }
             }
 

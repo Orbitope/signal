@@ -411,7 +411,7 @@ class Program
 
     class FlapPolicy : ISignalPolicy
     {
-        public int SelectPhase(Simulation sim, Node node, SignalController ctl)
-            => (ctl.CurrentPhase + 1) % ctl.Phases.Count;
+        public int SelectPhase(PolicyContext ctx)
+            => (ctx.Controller.CurrentPhase + 1) % ctx.Controller.Phases.Count;
     }
 }

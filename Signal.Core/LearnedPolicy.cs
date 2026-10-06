@@ -99,8 +99,9 @@ namespace Signal.Core
             _logits = new float[w.Actions]; _mask = new byte[w.Actions];
         }
 
-        public int SelectPhase(Simulation sim, Node node, SignalController ctl)
+        public int SelectPhase(PolicyContext ctx)
         {
+            var (sim, node, ctl) = ctx;
             if (_view == null || _view.Node != node) _view = new AgentView(sim, node, attach: false);
             _view.WriteObs(sim, _obs, 0);
             _view.WriteMask(_mask, 0);

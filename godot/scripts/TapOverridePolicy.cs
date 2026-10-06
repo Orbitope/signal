@@ -26,7 +26,7 @@ namespace SignalGodot
         public float Remaining(float now) => IsOverriding(now) ? _until - now : 0f;
         public int OverridePhase => _phase;
 
-        public int SelectPhase(Simulation sim, Node node, SignalController ctl)
-            => IsOverriding(sim.Time) ? _phase : _auto.SelectPhase(sim, node, ctl);
+        public int SelectPhase(PolicyContext ctx)
+            => IsOverriding(ctx.Sim.Time) ? _phase : _auto.SelectPhase(ctx);
     }
 }

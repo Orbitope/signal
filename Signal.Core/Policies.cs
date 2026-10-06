@@ -9,9 +9,26 @@ namespace Signal.Core
     /// FixedTime is also the player's authored plan in planning mode; External is
     /// the seam for player taps and ML actions.
     /// </summary>
+    /// <summary>
+    /// Everything a policy may look at when it picks a phase. New inputs are added
+    /// here, so existing policies keep compiling.
+    /// </summary>
+    public readonly struct PolicyContext
+    {
+        public readonly Simulation Sim;
+        public readonly Node Node;
+        public readonly SignalController Controller;
+
+        public PolicyContext(Simulation sim, Node node, SignalController controller)
+        { Sim = sim; Node = node; Controller = controller; }
+
+        public void Deconstruct(out Simulation sim, out Node node, out SignalController ctl)
+        { sim = Sim; node = Node; ctl = Controller; }
+    }
+
     public interface ISignalPolicy
     {
-        int SelectPhase(Simulation sim, Node node, SignalController ctl);
+        int SelectPhase(PolicyContext ctx);
     }
 
     public sealed class FixedTimePolicy : ISignalPolicy
@@ -23,8 +40,9 @@ namespace Signal.Core
         public FixedTimePolicy(float cycle, float[] splits, float offset = 0f)
         { Cycle = cycle; Splits = splits; Offset = offset; }
 
-        public int SelectPhase(Simulation sim, Node node, SignalController ctl)
+        public int SelectPhase(PolicyContext ctx)
         {
+            var (sim, node, ctl) = ctx;
             float lt = ((sim.Time - Offset) % Cycle + Cycle) % Cycle;
             float acc = 0f;
             for (int i = 0; i < Splits.Length; i++)
@@ -42,8 +60,9 @@ namespace Signal.Core
     {
         public int HysteresisVehicles = 2;
 
-        public int SelectPhase(Simulation sim, Node node, SignalController ctl)
+        public int SelectPhase(PolicyContext ctx)
         {
+            var (sim, node, ctl) = ctx;
             int best = ctl.CurrentPhase;
             int bestQ = PhaseQueue(sim, node, ctl, ctl.CurrentPhase) + HysteresisVehicles;
             for (int p = 0; p < ctl.Phases.Count; p++)
@@ -82,8 +101,9 @@ namespace Signal.Core
         /// yellow+all-red switching cost. In vehicles.</summary>
         public float SwitchStickiness = 2f;
 
-        public int SelectPhase(Simulation sim, Node node, SignalController ctl)
+        public int SelectPhase(PolicyContext ctx)
         {
+            var (sim, node, ctl) = ctx;
             int best = ctl.CurrentPhase; float bestP = float.MinValue;
             for (int p = 0; p < ctl.Phases.Count; p++)
             {
@@ -125,8 +145,9 @@ namespace Signal.Core
         public float MaxHold = 40f;
         private readonly MaxPressurePolicy _mp = new MaxPressurePolicy();
 
-        public int SelectPhase(Simulation sim, Node node, SignalController ctl)
+        public int SelectPhase(PolicyContext ctx)
         {
+            var (sim, node, ctl) = ctx;
             int starved = -1; float oldest = MaxHold;
             for (int p = 0; p < ctl.Phases.Count; p++)
             {
@@ -134,7 +155,7 @@ namespace Signal.Core
                 float w = OldestHeadWait(sim, node, ctl, p);
                 if (w > oldest) { oldest = w; starved = p; }
             }
-            return starved >= 0 ? starved : _mp.SelectPhase(sim, node, ctl);
+            return starved >= 0 ? starved : _mp.SelectPhase(ctx);
         }
 
         /// <summary>Longest wait among the cars at the head of this phase's in-links.</summary>
@@ -158,6 +179,6 @@ namespace Signal.Core
     {
         private int _requested;
         public void Request(int phase) => _requested = phase;
-        public int SelectPhase(Simulation sim, Node node, SignalController ctl) => _requested;
+        public int SelectPhase(PolicyContext ctx) => _requested;
     }
 }
