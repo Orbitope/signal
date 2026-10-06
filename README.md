@@ -31,4 +31,11 @@ signal to twenty-five, the same 62-thousand-parameter model unchanged.
 bash training/run_all.sh
 ```
 
+## License
+
+Copyright (C) 2026 Matthew Burke.
+
+Signal is free software, licensed under the GNU General Public License,
+version 3. See [LICENSE](LICENSE) for the full text. It comes with no warranty.
+
 Built by Matthew Burke.
