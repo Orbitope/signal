@@ -547,6 +547,17 @@ class Program
                     "emergency vehicle should have entered the first link");
             });
 
+            T.Run("a held emergency vehicle counts toward the average wait", () =>
+            {
+                var sim = new Simulation(new LevelDef { network = NetworkBuilder.FourWay(ControlType.Signalized), demand = new DemandDef() }, 4);
+                float sum = 0f; int before = 0;
+                sim.Demand.AccumulateHeldWait(ref sum, ref before);
+                T.Assert(sim.SpawnEmergency(NetworkBuilder.N, NetworkBuilder.S) != null, "no route");
+                int after = 0;
+                sim.Demand.AccumulateHeldWait(ref sum, ref after);
+                T.Assert(after == before + 1, $"held-wait count went from {before} to {after}");
+            });
+
             T.Run("spawning an emergency vehicle with no route returns null and changes nothing", () =>
             {
                 // One one-way link from node 1 to node 2: nothing leads from 2 back to 1.

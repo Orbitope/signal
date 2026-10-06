@@ -6,6 +6,7 @@
 - [x] 1.5 Change `DemandSource.HeldCount` to count vehicles in the emergency queues too
 - [x] 1.6 Add `Simulation.EmergencyCount`, raised by `Simulation.SpawnEmergency` and lowered in `Simulation.TryTransfer` where an emergency vehicle leaves the network
 - [x] 1.7 Add `Simulation.SpawnEmergency`, which calls the demand source and returns the vehicle or null
+- [x] 1.8 Change `DemandSource.AccumulateHeldWait` to include vehicles in the emergency queues
 
 ## 2. Controller
 - [x] 2.1 Add `SignalController.PreemptDistance`, 250 metres by default; zero switches preemption off
@@ -24,3 +25,4 @@
 - [x] 3.7 Add the test "spawning an emergency vehicle with no route returns null and changes nothing"
 - [x] 3.8 Add the test "a run with no emergency vehicle has the same state hash as before the change"
 - [x] 3.9 Add the test "an emergency vehicle in the network keeps at least 75% of the step rate"
+- [x] 3.10 Add the test "a held emergency vehicle counts toward the average wait"

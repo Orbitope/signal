@@ -29,3 +29,17 @@ Decided by Matthew on 2026-10-06.
 - The emergency vehicle drives like any other and queues behind traffic. Preemption clears the
   signal, not the road.
 - While one emergency vehicle exists anywhere, every signal scans its incoming links each tick.
+- A controller sees an emergency vehicle only once it is on an incoming link. One held at a full
+  entrance is invisible to the signal that would let it in.
+- `AgentView.WriteObs` and `AgentView.TickPressure` read only the ordinary entry queues. That follows
+  from keeping emergency vehicles out of what policies see.
+- The scenario "preemption overrules requests made while it is in force" would pass without task 2.5,
+  because the controller asks for the preempt phase again on its next tick. Task 2.5 stays: it stops
+  the outside request from landing at all, so no yellow can start in the tick between.
+
+## Amended during implementation
+- Added task 1.8 after Leyline's review facts listed `DemandSource.AccumulateHeldWait` as a reader of
+  the entry queues that no task named. Without it a held emergency vehicle was missing from the
+  average wait.
+- `SignalController.SetPending` was added by the implementer as a private helper for 2.4 and 2.5.
+

@@ -39,6 +39,10 @@ quietly when there is no route.
 - **WHEN** cars are held at an entrance and an emergency vehicle is spawned there
 - **THEN** the emergency vehicle enters the first link before any held car
 
+#### Scenario: a held emergency vehicle counts toward the average wait
+- **WHEN** an emergency vehicle is spawned and has not yet entered its first link
+- **THEN** the held-wait total counts one vehicle more than before it was spawned
+
 #### Scenario: spawning an emergency vehicle with no route returns null and changes nothing
 - **WHEN** an emergency vehicle is requested between two nodes with no route
 - **THEN** the result is null and the emergency count is unchanged

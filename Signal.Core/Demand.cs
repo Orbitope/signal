@@ -134,6 +134,8 @@ namespace Signal.Core
         {
             foreach (var kv in EntryQueues)
                 foreach (var v in kv.Value) { sum += v.Wait; count++; }
+            foreach (var kv in EmergencyQueues)
+                foreach (var v in kv.Value) { sum += v.Wait; count++; }
         }
     }
 
